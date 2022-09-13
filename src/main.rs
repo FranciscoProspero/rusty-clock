@@ -1,7 +1,8 @@
 use std::time::{Duration, Instant};
-use std::thread;
+use std::{thread, time};
 use std::sync::{Arc, Mutex};
 use std::io;
+use std::sync::mpsc::{self, TryRecvError};
 
 // Objetivos:
 //   Ter um cli
@@ -33,33 +34,39 @@ enum TypesOfTimers {
     Quit
 }
 
+#[derive(Debug)]
 struct TimerGlobs {
     timer_type: TypesOfTimers,
     id: usize,
-    total_time: i32,
-    current_time: i32,
+    total_time: Duration,
+    current_time: Duration,
     alert_timer: i32
 }
 
 impl TimerGlobs {
     fn new(type_of_timer: TypesOfTimers, idx : usize) -> TimerGlobs {
-        TimerGlobs {timer_type: type_of_timer, id: idx, total_time: 0, current_time: 0, alert_timer: 0}
+        TimerGlobs {timer_type: type_of_timer, id: idx, total_time: Duration::new(0,0), current_time: Duration::new(0,0), alert_timer: 0}
+    }
+
+    fn update_current_timer(&mut self, elapsed_time : Duration) -> (){
+        self.current_time = elapsed_time;
+    }
+
+    fn update_total_timer(&mut self, elapsed_time : Duration) -> (){
+        self.total_time = self.total_time + elapsed_time;
     }
 }
 
 
 fn main() {
-
-    let now = Instant::now();
     start_cli();
-
-    let elapsed_time = now.elapsed();
-    println!("You have been practicing for {} seconds.", elapsed_time.as_secs());
 }
 
 fn start_cli() {
     let timer_names: [TypesOfTimers; 4] = [TypesOfTimers::Study, TypesOfTimers::Work, TypesOfTimers::Fun, TypesOfTimers::Coffee];
-
+    let input_possibilities = vec!["Study", "study", "Work", "work", "Fun", "fun", "Coffee", "coffee"];
+    let input_exit = vec!["Exit", "exit", "Quit", "quit", "End", "end", "Terminate", "terminate", "Q", "q"];
+    
     let mut test_vec = Vec::with_capacity(4);
 
     for (i, name) in timer_names.into_iter().enumerate() {
@@ -69,34 +76,88 @@ fn start_cli() {
     let timer_vec_mtx = Arc::new(Mutex::new(test_vec));
     println!("You have started the Study timer");
     
+    let (tx, rx) = mpsc::channel();
+    let timer_vec = Arc::clone(&timer_vec_mtx);
+    let handle = thread::spawn(move || { 
+        timer_thread(&timer_vec, rx)
+    });
+    //handle.join().unwrap();
     loop {
+        
         let mut input = String::new();
         io::stdin().read_line(&mut input).expect("error: unable to read user input");
-        let timer_vec = Arc::clone(&timer_vec_mtx);
-        match input.trim() {
-            "Study" => spawn_control(&timer_vec, 0),
-            "Work" => spawn_control(&timer_vec, 1),
-            "Fun" => spawn_control(&timer_vec, 2),
-            "Coffee" => spawn_control(&timer_vec, 3),
-            "Quit" => break,
-            _ => -1,
-        };
+        let mut num = timer_vec_mtx.lock().unwrap();
+        println!("{:?}", *num); 
+        if input_possibilities.contains( &input.trim() ) {
+            
+            let mtx = Arc::clone(&timer_vec_mtx);
+            match input.trim() {
+                "Study" | "study" => tx.send(TypesOfTimers::Study),
+                "Work" | "work" => tx.send(TypesOfTimers::Work),
+                "Fun" | "fun" => tx.send(TypesOfTimers::Fun),
+                "Coffee" | "coffee" => tx.send(TypesOfTimers::Coffee),
+                _ => Ok(()),
+            };
+        } 
+        else if input_exit.contains(&input.trim())
+        {
+            //let mut num = timer_vec_mtx.lock().unwrap();
+            //println!("{:?}", *num); 
+            let _ = tx.send(TypesOfTimers::Quit);
+
+            break;
+        }
     }
+    
 }
 
-fn spawn_control( batch:&Arc<Mutex<Vec<TimerGlobs>>>, position: usize ) -> i32 {
-    let mtx = Arc::clone(&batch);
-    let handle = thread::spawn(move || { 
-       let mut num = mtx.lock().unwrap();
-       count_zi_time((*num)[position].id); 
-    });
-    handle.join().unwrap();
-    0
-}
-
-fn count_zi_time(idy: usize) {
+fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Receiver<TypesOfTimers>) -> i32 {
+    println!("yes my name is burrito");
     let now = Instant::now();
-    println!("zi time iz counts{:?}", idy);
+    let mut running_pos : usize = 50;
+    let fifty_ms = time::Duration::from_millis(50);
 
-    let elapsed_time = now.elapsed();
+    loop {
+        thread::sleep(fifty_ms);
+        if (running_pos < 5) {
+            let elapsed_time = now.elapsed();      
+            let mut num = mtx.lock().unwrap();
+            num[running_pos].update_current_timer(elapsed_time);
+        }
+        match rx.try_recv() {
+            Ok(TypesOfTimers::Study) => {
+                running_pos = 0;
+                println!("Study")
+            },
+            Ok(TypesOfTimers::Work) => {
+                running_pos = 1;
+                println!("Work")
+            },
+            Ok(TypesOfTimers::Fun) => {
+                running_pos = 2;
+                println!("Fun")
+            },
+            Ok(TypesOfTimers::Coffee) => {
+                running_pos = 3;
+                println!("Coffee")
+            },
+            Ok(TypesOfTimers::Quit)  => {
+                let elapsed_time = now.elapsed();      
+                let mut num = mtx.lock().unwrap();
+                num[running_pos].update_total_timer(elapsed_time);
+                println!("Quit -> Terminating.");
+                break;
+            },
+            Ok(_) => {
+                println!("Nota sure");
+                break;
+            }
+            Err(TryRecvError::Disconnected) => {
+                    println!("Error Disconetiooni."); 
+                    break;
+                }
+            Err(TryRecvError::Empty) => {}
+        }
+    }
+    0
 }
