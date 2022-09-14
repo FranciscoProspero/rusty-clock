@@ -40,12 +40,13 @@ struct TimerGlobs {
     id: usize,
     total_time: Duration,
     current_time: Duration,
-    alert_timer: i32
+    alert_timer: i32,
+    nr_of_start: i32
 }
 
 impl TimerGlobs {
     fn new(type_of_timer: TypesOfTimers, idx : usize) -> TimerGlobs {
-        TimerGlobs {timer_type: type_of_timer, id: idx, total_time: Duration::new(0,0), current_time: Duration::new(0,0), alert_timer: 0}
+        TimerGlobs {timer_type: type_of_timer, id: idx, total_time: Duration::new(0,0), current_time: Duration::new(0,0), alert_timer: 0, nr_of_start: 0}
     }
 
     fn update_current_timer(&mut self, elapsed_time : Duration) -> (){
@@ -54,6 +55,10 @@ impl TimerGlobs {
 
     fn update_total_timer(&mut self, elapsed_time : Duration) -> (){
         self.total_time = self.total_time + elapsed_time;
+    }
+
+    fn increment_start_counter(&mut self) -> (){
+        self.nr_of_start += 1;
     }
 }
 
@@ -116,32 +121,26 @@ fn start_cli() {
 
 fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Receiver<TypesOfTimers>) -> i32 {
     println!("yes my name is burrito");
-    let now = Instant::now();
+    let mut now = Instant::now();
     let mut running_pos : usize = 50;
     let fifty_ms = time::Duration::from_millis(50);
 
     loop {
-        
-        if (running_pos < 5) {
-            let elapsed_time = now.elapsed();      
-            let mut num = mtx.lock().unwrap();
-            num[running_pos].update_current_timer(elapsed_time);
-        }
         let mut check = match rx.try_recv() {
             Ok(TypesOfTimers::Study) => {
-                running_pos = 0;
+                change_timer(&mtx , &mut running_pos, 0, &mut now);
                 println!("Study")
             },
             Ok(TypesOfTimers::Work) => {
-                running_pos = 1;
+                change_timer(&mtx , &mut running_pos, 1, &mut now);
                 println!("Work")
             },
             Ok(TypesOfTimers::Fun) => {
-                running_pos = 2;
+                change_timer(&mtx , &mut running_pos, 2, &mut now);
                 println!("Fun")
             },
             Ok(TypesOfTimers::Coffee) => {
-                running_pos = 3;
+                change_timer(&mtx , &mut running_pos, 3, &mut now);
                 println!("Coffee");
             },
             Ok(TypesOfTimers::Quit)  => {
@@ -162,4 +161,25 @@ fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Receiver<
     }
     println!("It is finito con este treda");
     0
+}
+
+fn change_timer(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, position : &mut usize, new_position: usize, time: &mut Instant) {
+    if *position == new_position {
+        println!("Timer was already running!");
+    }
+    else if *position < 5 {
+        let elapsed_time = time.elapsed();      
+        let mut num = mtx.lock().unwrap();
+        num[*position].update_current_timer(elapsed_time);
+        num[*position].update_total_timer(elapsed_time);
+        *time = Instant::now();
+        *position = new_position;
+        num[*position].increment_start_counter();
+    }
+    else {
+        *time = Instant::now();
+        *position = new_position;
+        let mut num = mtx.lock().unwrap();
+        num[*position].increment_start_counter();
+    }
 }
