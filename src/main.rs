@@ -86,8 +86,10 @@ fn start_cli() {
         
         let mut input = String::new();
         io::stdin().read_line(&mut input).expect("error: unable to read user input");
+        {
         let mut num = timer_vec_mtx.lock().unwrap();
         println!("{:?}", *num); 
+        }
         if input_possibilities.contains( &input.trim() ) {
             
             let mtx = Arc::clone(&timer_vec_mtx);
@@ -101,14 +103,15 @@ fn start_cli() {
         } 
         else if input_exit.contains(&input.trim())
         {
-            //let mut num = timer_vec_mtx.lock().unwrap();
-            //println!("{:?}", *num); 
-            let _ = tx.send(TypesOfTimers::Quit);
-
+            tx.send(TypesOfTimers::Quit);
+            handle.join().unwrap();
             break;
         }
     }
-    
+    {
+        let mut num = timer_vec_mtx.lock().unwrap();
+        println!("Finali {:?}", *num); 
+        }
 }
 
 fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Receiver<TypesOfTimers>) -> i32 {
@@ -118,13 +121,13 @@ fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Receiver<
     let fifty_ms = time::Duration::from_millis(50);
 
     loop {
-        thread::sleep(fifty_ms);
+        
         if (running_pos < 5) {
             let elapsed_time = now.elapsed();      
             let mut num = mtx.lock().unwrap();
             num[running_pos].update_current_timer(elapsed_time);
         }
-        match rx.try_recv() {
+        let mut check = match rx.try_recv() {
             Ok(TypesOfTimers::Study) => {
                 running_pos = 0;
                 println!("Study")
@@ -139,7 +142,7 @@ fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Receiver<
             },
             Ok(TypesOfTimers::Coffee) => {
                 running_pos = 3;
-                println!("Coffee")
+                println!("Coffee");
             },
             Ok(TypesOfTimers::Quit)  => {
                 let elapsed_time = now.elapsed();      
@@ -149,15 +152,14 @@ fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Receiver<
                 break;
             },
             Ok(_) => {
-                println!("Nota sure");
-                break;
+                println!("Nota sure")
             }
             Err(TryRecvError::Disconnected) => {
-                    println!("Error Disconetiooni."); 
-                    break;
-                }
+                    println!("Error Disconetiooni.")
+            }
             Err(TryRecvError::Empty) => {}
-        }
+        };
     }
+    println!("It is finito con este treda");
     0
 }
