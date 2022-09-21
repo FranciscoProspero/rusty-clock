@@ -1,25 +1,26 @@
 use std::time::{Duration, Instant};
-use std::{thread, time};
+use std::thread;
 use std::sync::{Arc, Mutex};
 use std::io;
 use std::sync::mpsc::{self, TryRecvError};
-
+use notify_rust::{Notification, Timeout};
+use rand::Rng;
 // Objetivos:
-//   Ter um cli
-//   Receber um comando para dar start de timer especifico
-//   Tipos de timers -> Study, Work, Fun, Coffee
-//   Apenas um timer pode estar ativo
-//   Dá para mudar de timer sem ter de terminar o outro primeiro
+// x  Ter um cli
+// x  Receber um comando para dar start de timer especifico
+// x  Tipos de timers -> Study, Work, Fun, Coffee
+// x  Apenas um timer pode estar ativo
+// x  Dá para mudar de timer sem ter de terminar o outro primeiro
 //   Gravar valores por dia, semana, mes, ano e fazer estatisticas
 //   Avisar a cada x minutos que timer está a decorrer, pode ser especificado ao correr o comando
 //   Notificar de y em y a perguntar o que se está a fazer
 //   Ter num nice gui :) probably tui-rs
 
 // Ordem Tarefas:
-//   1 - cli
-//   2 - types of timers
-//   3 - start timer commands
-//   4 - stop timer commands
+//  kinda check  1 - cli 
+//  kinda check  2 - types of timers
+//  kinda check  3 - start timer commands
+//  kinda check  4 - stop timer commands
 //   5 - save data
 //   6 - notifiyer
 //   7 - gui
@@ -36,17 +37,17 @@ enum TypesOfTimers {
 
 #[derive(Debug)]
 struct TimerGlobs {
-    timer_type: TypesOfTimers,
-    id: usize,
+    _timer_type: TypesOfTimers,
+    _id: usize,
     total_time: Duration,
     current_time: Duration,
-    alert_timer: i32,
+    _alert_timer: i32,
     nr_of_start: i32
 }
 
 impl TimerGlobs {
     fn new(type_of_timer: TypesOfTimers, idx : usize) -> TimerGlobs {
-        TimerGlobs {timer_type: type_of_timer, id: idx, total_time: Duration::new(0,0), current_time: Duration::new(0,0), alert_timer: 0, nr_of_start: 0}
+        TimerGlobs {_timer_type: type_of_timer, _id: idx, total_time: Duration::new(0,0), current_time: Duration::new(0,0), _alert_timer: 0, nr_of_start: 0}
     }
 
     fn update_current_timer(&mut self, elapsed_time : Duration) -> (){
@@ -68,6 +69,8 @@ fn main() {
 }
 
 fn start_cli() {
+    let mut rng = rand::thread_rng();
+
     let timer_names: [TypesOfTimers; 4] = [TypesOfTimers::Study, TypesOfTimers::Work, TypesOfTimers::Fun, TypesOfTimers::Coffee];
     let input_possibilities = vec!["Study", "study", "Work", "work", "Fun", "fun", "Coffee", "coffee"];
     let input_exit = vec!["Exit", "exit", "Quit", "quit", "End", "end", "Terminate", "terminate", "Q", "q"];
@@ -86,35 +89,48 @@ fn start_cli() {
     let handle = thread::spawn(move || { 
         timer_thread(&timer_vec, rx)
     });
-    //handle.join().unwrap();
+
+    let mut n1: u64 = rng.gen_range(6..20);
+    let mut notifier_time = Instant::now();
+    let mut random_seconds = Duration::new(n1, 0);
     loop {
-        
+        if notifier_time.elapsed() >= random_seconds {
+            //random_request_notification();
+            println!("Watcha doiiiin?");
+            n1 = rng.gen_range(6..20);
+            random_seconds = Duration::new(n1, 0);
+            notifier_time = Instant::now();
+        }
         let mut input = String::new();
         io::stdin().read_line(&mut input).expect("error: unable to read user input");
         {
-        let mut num = timer_vec_mtx.lock().unwrap();
-        println!("{:?}", *num); 
+            let num = timer_vec_mtx.lock().unwrap();
+            println!("{:?}", *num); 
         }
         if input_possibilities.contains( &input.trim() ) {
-            
-            let mtx = Arc::clone(&timer_vec_mtx);
-            match input.trim() {
+            let res = match input.trim() {
                 "Study" | "study" => tx.send(TypesOfTimers::Study),
                 "Work" | "work" => tx.send(TypesOfTimers::Work),
                 "Fun" | "fun" => tx.send(TypesOfTimers::Fun),
                 "Coffee" | "coffee" => tx.send(TypesOfTimers::Coffee),
-                _ => Ok(()),
+                &_ => todo!(),
             };
+
+            match res {
+                Ok(_) => (),
+                Err(error) => panic!("Error message: {}", error),
+            }
         } 
         else if input_exit.contains(&input.trim())
         {
-            tx.send(TypesOfTimers::Quit);
+            let res = tx.send(TypesOfTimers::Quit);
+            res.unwrap();
             handle.join().unwrap();
             break;
         }
     }
     {
-        let mut num = timer_vec_mtx.lock().unwrap();
+        let num = timer_vec_mtx.lock().unwrap();
         println!("Finali {:?}", *num); 
         }
 }
@@ -123,35 +139,37 @@ fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Receiver<
     println!("yes my name is burrito");
     let mut now = Instant::now();
     let mut running_pos : usize = 50;
-    let fifty_ms = time::Duration::from_millis(50);
 
     loop {
-        let mut check = match rx.try_recv() {
+        match rx.try_recv() {
             Ok(TypesOfTimers::Study) => {
                 change_timer(&mtx , &mut running_pos, 0, &mut now);
+                notifier(TypesOfTimers::Study);
                 println!("Study")
             },
             Ok(TypesOfTimers::Work) => {
                 change_timer(&mtx , &mut running_pos, 1, &mut now);
+                notifier(TypesOfTimers::Work);
                 println!("Work")
             },
             Ok(TypesOfTimers::Fun) => {
                 change_timer(&mtx , &mut running_pos, 2, &mut now);
+                notifier(TypesOfTimers::Fun);
                 println!("Fun")
             },
             Ok(TypesOfTimers::Coffee) => {
                 change_timer(&mtx , &mut running_pos, 3, &mut now);
-                println!("Coffee");
+                notifier(TypesOfTimers::Coffee);
             },
             Ok(TypesOfTimers::Quit)  => {
                 let elapsed_time = now.elapsed();      
                 let mut num = mtx.lock().unwrap();
-                num[running_pos].update_total_timer(elapsed_time);
+                if running_pos < 5 {
+                    num[running_pos].update_total_timer(elapsed_time);
+                }
+                notifier(TypesOfTimers::Quit);
                 println!("Quit -> Terminating.");
                 break;
-            },
-            Ok(_) => {
-                println!("Nota sure")
             }
             Err(TryRecvError::Disconnected) => {
                     println!("Error Disconetiooni.")
@@ -183,3 +201,43 @@ fn change_timer(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, position : &mut usize, new_pos
         num[*position].increment_start_counter();
     }
 }
+
+fn notifier( type_of_timer : TypesOfTimers) -> i32 {
+
+    let timer = match type_of_timer {
+        TypesOfTimers::Study => "Study",
+        TypesOfTimers::Work => "Work",
+        TypesOfTimers::Fun => "Fun",
+        TypesOfTimers::Coffee => "Coffee",
+        TypesOfTimers::Quit => "Quit"
+    };
+    
+    Notification::new()
+        .summary(timer)
+        .body("The application is quiting! babai.")
+        .timeout(Timeout::Milliseconds(1000)) //milliseconds
+        .show().unwrap();
+    1
+}
+
+// fn random_request_notification() {
+//     Notification::new().summary("What are you doin?")
+//                    .action("Work", "Work")
+//                    .action("Study", "Study")
+//                    .action("Fun", "Fun")
+//                    .action("Coffee", "Coffee")
+//                    .action("Quit", "Quit")
+//                    .show()
+//                    .unwrap()
+//                    .wait_for_action(|action| match action {
+//                                         "Work" => println!("you clicked \"default\""),
+//                                         "Study" => println!("that was correct"),
+//                                         "Fun" => println!("you clicked \"default\""),
+//                                         "Coffee" => println!("that was correct"),
+//                                         "Quit" => println!("you clicked \"default\""),
+//                                         // here "__closed" is a hard coded keyword
+//                                         "__closed" => println!("the notification was closed"),
+//                                         _ => ()
+//                                     });
+//     ()
+// }
