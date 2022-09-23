@@ -1,4 +1,4 @@
-use crate::{TimerGlobs, TypesOfTimers};
+use super::timer_structs::{TimerGlobs, TypesOfTimers};
 use super::notification::{notifier, random_request_notification};
 use rand::Rng;
 use std::time::{Duration, Instant};

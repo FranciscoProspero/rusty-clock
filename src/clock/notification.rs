@@ -1,6 +1,6 @@
 use notify_rust::{Notification, Timeout};
 use std::time::Duration;
-use crate::TypesOfTimers;
+use super::timer_structs::TypesOfTimers;
 
 pub fn notifier( type_of_timer : TypesOfTimers) -> i32 {
 
