@@ -69,7 +69,6 @@ fn main() {
 }
 
 fn start_cli() {
-    let mut rng = rand::thread_rng();
 
     let timer_names: [TypesOfTimers; 4] = [TypesOfTimers::Study, TypesOfTimers::Work, TypesOfTimers::Fun, TypesOfTimers::Coffee];
     let input_possibilities = vec!["Study", "study", "Work", "work", "Fun", "fun", "Coffee", "coffee"];
@@ -90,17 +89,7 @@ fn start_cli() {
         timer_thread(&timer_vec, rx)
     });
 
-    let mut n1: u64 = rng.gen_range(6..20);
-    let mut notifier_time = Instant::now();
-    let mut random_seconds = Duration::new(n1, 0);
     loop {
-        if notifier_time.elapsed() >= random_seconds {
-            //random_request_notification();
-            println!("Watcha doiiiin?");
-            n1 = rng.gen_range(6..20);
-            random_seconds = Duration::new(n1, 0);
-            notifier_time = Instant::now();
-        }
         let mut input = String::new();
         io::stdin().read_line(&mut input).expect("error: unable to read user input");
         {
@@ -140,7 +129,19 @@ fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Receiver<
     let mut now = Instant::now();
     let mut running_pos : usize = 50;
 
+    let mut rng = rand::thread_rng();
+
+    let mut n1: u64 = rng.gen_range(6..20);
+    let mut notifier_time = Instant::now();
+    let mut random_seconds = Duration::new(n1, 0);
     loop {
+
+        if notifier_time.elapsed() >= random_seconds {
+            random_request_notification(notifier_time.elapsed());
+            n1 = rng.gen_range(60..3600);
+            random_seconds = Duration::new(n1, 0);
+            notifier_time = Instant::now();
+        }
         match rx.try_recv() {
             Ok(TypesOfTimers::Study) => {
                 change_timer(&mtx , &mut running_pos, 0, &mut now);
@@ -220,24 +221,12 @@ fn notifier( type_of_timer : TypesOfTimers) -> i32 {
     1
 }
 
-// fn random_request_notification() {
-//     Notification::new().summary("What are you doin?")
-//                    .action("Work", "Work")
-//                    .action("Study", "Study")
-//                    .action("Fun", "Fun")
-//                    .action("Coffee", "Coffee")
-//                    .action("Quit", "Quit")
-//                    .show()
-//                    .unwrap()
-//                    .wait_for_action(|action| match action {
-//                                         "Work" => println!("you clicked \"default\""),
-//                                         "Study" => println!("that was correct"),
-//                                         "Fun" => println!("you clicked \"default\""),
-//                                         "Coffee" => println!("that was correct"),
-//                                         "Quit" => println!("you clicked \"default\""),
-//                                         // here "__closed" is a hard coded keyword
-//                                         "__closed" => println!("the notification was closed"),
-//                                         _ => ()
-//                                     });
-//     ()
-// }
+fn random_request_notification(tiempo: Duration) {
+    let tbody = format!("The application is very ran dom! It took this tiempo {:?} babai.", tiempo);
+    Notification::new()
+        .summary("Very random")
+        .body(&tbody)
+        .timeout(Timeout::Milliseconds(100)) //milliseconds
+        .show().unwrap();
+    ()
+}
