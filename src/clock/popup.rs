@@ -22,7 +22,7 @@ impl Popup {
         Counter::run(Settings {
             window: testis,
             ..Settings::default()
-        }); 
+        });
     }
 }
 
@@ -45,6 +45,7 @@ pub struct Counter {
     coffee_button: button::State,
     statistical_button: button::State,
     quit_button: button::State,
+    close : bool,
 }
 
 
@@ -57,6 +58,10 @@ impl Sandbox for Counter {
 
     fn title(&self) -> String {
         String::from("What you doin'?")
+    }
+
+    fn should_exit(&self) -> bool {
+        self.close
     }
 
     fn update(&mut self, message: Message) {
@@ -78,6 +83,7 @@ impl Sandbox for Counter {
             }
             Message::Quit => {
                 println!("Having quito");
+                self.close = true;
             }
         }
     }
@@ -114,4 +120,5 @@ impl Sandbox for Counter {
             )
             .into()
     }
+
 }
