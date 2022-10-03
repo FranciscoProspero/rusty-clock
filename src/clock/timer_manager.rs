@@ -18,7 +18,7 @@ pub fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Recei
     loop {
 
         if notifier_time.elapsed() >= random_seconds {
-            tx2.send(1);
+            let _tx_return = tx2.send(1);
             random_request_notification(notifier_time.elapsed());
             n1 = rng.gen_range(6..20);
             random_seconds = Duration::new(n1, 0);

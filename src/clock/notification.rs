@@ -1,7 +1,7 @@
 use notify_rust::{Notification, Timeout};
 use std::time::Duration;
 use super::timer_structs::TypesOfTimers;
-use super::popup::Popup;
+
 
 pub fn notifier( type_of_timer : TypesOfTimers) -> i32 {
 
