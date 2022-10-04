@@ -1,4 +1,5 @@
 use rusqlite::{Connection, Result};
+use super::timer_structs::{TimerGlobs, TypesOfTimers};
 
 #[derive(Debug)]
 pub struct Timer {
@@ -15,7 +16,7 @@ pub struct Datab {
 
 impl Datab {
     pub fn new() -> Datab {
-        let conn = Connection::open("timer.db");
+        let conn = Connection::open("rusty-clock.db");
         match conn {
             Ok(_) => Datab { conn : conn.unwrap(), connected : true},
             Err(_) => Datab { conn : conn.unwrap(), connected : false},
