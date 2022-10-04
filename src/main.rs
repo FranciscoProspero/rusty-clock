@@ -3,6 +3,7 @@ mod clock;
 use clock::timer_manager::timer_thread;
 use clock::stdin::stdin_parser;
 use clock::timer_structs::{TimerGlobs, TypesOfTimers};
+use clock::db::{Datab, Timer};
 //use clock::popup::Popup;
 
 use std::sync::mpsc::TryRecvError;
@@ -10,17 +11,18 @@ use std::sync::mpsc::TryRecvError;
 //     button, Alignment, Button, Column, Element, Sandbox, Settings, Text, window,
 // };
 
-
 use std::thread;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 
 fn main() {
-    start_cli();
+    let database = Datab::new();
+    database.createtable();
+    start_cli(&database);
 }
 
-fn start_cli() {
-
+fn start_cli(database : &Datab ) {
+    database.dbruntest();
     let (rx, handlers) = launch_threads();
 
     main_loop(rx);
