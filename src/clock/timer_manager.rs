@@ -28,22 +28,22 @@ pub fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Recei
         }
         match rx.try_recv() {
             Ok(TypesOfTimers::Study) => {
-                change_timer(&mtx , &mut running_pos, 0, &mut now);
+                change_timer(&mtx , &mut running_pos, 0, &mut now, &database);
                 notifier(TypesOfTimers::Study);
                 println!("Study")
             },
             Ok(TypesOfTimers::Work) => {
-                change_timer(&mtx , &mut running_pos, 1, &mut now);
+                change_timer(&mtx , &mut running_pos, 1, &mut now, &database);
                 notifier(TypesOfTimers::Work);
                 println!("Work")
             },
             Ok(TypesOfTimers::Fun) => {
-                change_timer(&mtx , &mut running_pos, 2, &mut now);
+                change_timer(&mtx , &mut running_pos, 2, &mut now, &database);
                 notifier(TypesOfTimers::Fun);
                 println!("Fun")
             },
             Ok(TypesOfTimers::Coffee) => {
-                change_timer(&mtx , &mut running_pos, 3, &mut now);
+                change_timer(&mtx , &mut running_pos, 3, &mut now, &database);
                 notifier(TypesOfTimers::Coffee);
             },
             Ok(TypesOfTimers::Quit)  => {
@@ -69,7 +69,7 @@ pub fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Recei
 }
 
 
-fn change_timer(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, position : &mut usize, new_position: usize, time: &mut Instant) {
+fn change_timer(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, position : &mut usize, new_position: usize, time: &mut Instant, database : &Datab) {
     println!("Change the timere");
     if *position == new_position {
         println!("Timer was already running!");
@@ -80,6 +80,9 @@ fn change_timer(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, position : &mut usize, new_pos
         num[*position].update_current_timer(elapsed_time);
         num[*position].update_total_timer(elapsed_time);
         
+        let totaltime = *&num[*position].total_time.as_millis() as u64;
+        database.db_update_val(&totaltime, &(*&num[*position].id as u32));
+
         *time = Instant::now();
         *position = new_position;
         num[*position].increment_start_counter();
