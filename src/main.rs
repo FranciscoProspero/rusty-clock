@@ -22,18 +22,23 @@ fn main() {
 }
 
 fn start_cli(database : &Datab ) {
-    database.dbruntest();
-    let (rx, handlers) = launch_threads();
+    // let test = TimerGlobs::new(TypesOfTimers::Study,0);
+    // database.db_new_val(&test, TypesOfTimers::Study.to_string());
+
+    database.db_read_all();
+    //database.db_update_val(31,4);
+    //database.db_read_all();
+    let (rx, handlers) = launch_threads(&database);
 
     main_loop(rx);
-
+    database.db_read_all();
     for handle in handlers {
         handle.join().unwrap();
     }
 }
 
-fn launch_threads() -> (std::sync::mpsc::Receiver<u32>, Vec<thread::JoinHandle<()>>){
-    let test_vec = generate_timervec();
+fn launch_threads(database : &Datab) -> (std::sync::mpsc::Receiver<u32>, Vec<thread::JoinHandle<()>>){
+    let test_vec = generate_timervec(&database);
 
     let timer_vec_mtx = Arc::new(Mutex::new(test_vec));
     let timer_vec = Arc::clone(&timer_vec_mtx);
@@ -53,12 +58,13 @@ fn launch_threads() -> (std::sync::mpsc::Receiver<u32>, Vec<thread::JoinHandle<(
     (rx2, handlers)
 }
 
-fn generate_timervec() -> Vec<TimerGlobs> {
+fn generate_timervec(database : &Datab) -> Vec<TimerGlobs> {
     let timer_names: [TypesOfTimers; 4] = [TypesOfTimers::Study, TypesOfTimers::Work, TypesOfTimers::Fun, TypesOfTimers::Coffee];
     let mut timervec = Vec::with_capacity(4);
 
     for (i, name) in timer_names.into_iter().enumerate() {
-        timervec.push(TimerGlobs::new(name,i));
+        let total_time = database.read_total_time(i as i32);
+        timervec.push(TimerGlobs::new(name,i,total_time));
     }
     timervec
 }

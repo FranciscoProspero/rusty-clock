@@ -1,5 +1,6 @@
 use super::timer_structs::{TimerGlobs, TypesOfTimers};
 use super::notification::{notifier, random_request_notification};
+use super::db::{Datab, Timer};
 use rand::Rng;
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};
@@ -9,12 +10,13 @@ pub fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Recei
     println!("yes my name is burrito");
     let mut now = Instant::now();
     let mut running_pos : usize = 50;
-
+    let database = Datab::new();
     let mut rng = rand::thread_rng();
 
     let mut n1: u64 = rng.gen_range(6..20);
     let mut notifier_time = Instant::now();
     let mut random_seconds = Duration::new(n1, 0);
+
     loop {
 
         if notifier_time.elapsed() >= random_seconds {
@@ -50,8 +52,10 @@ pub fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Recei
                 if running_pos < 5 {
                     num[running_pos].update_total_timer(elapsed_time);
                 }
+                let totaltime = *&num[running_pos].total_time.as_millis() as u64;
+                database.db_update_val(&totaltime, &(*&num[running_pos].id as u32));
                 notifier(TypesOfTimers::Quit);
-                println!("Quit -> Terminating.");
+                println!("Quit -> Terminating.{:?}",totaltime);
                 break;
             }
             Err(TryRecvError::Disconnected) => {
@@ -66,6 +70,7 @@ pub fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Recei
 
 
 fn change_timer(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, position : &mut usize, new_position: usize, time: &mut Instant) {
+    println!("Change the timere");
     if *position == new_position {
         println!("Timer was already running!");
     }
@@ -74,6 +79,7 @@ fn change_timer(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, position : &mut usize, new_pos
         let mut num = mtx.lock().unwrap();
         num[*position].update_current_timer(elapsed_time);
         num[*position].update_total_timer(elapsed_time);
+        
         *time = Instant::now();
         *position = new_position;
         num[*position].increment_start_counter();

@@ -1,10 +1,12 @@
 use rusqlite::{Connection, Result};
 use super::timer_structs::{TimerGlobs, TypesOfTimers};
+use std::time::SystemTime;
 
 #[derive(Debug)]
 pub struct Timer {
     pub id: i32,
     pub timertype: String,
+    pub time: f64,
 }
 
 
@@ -25,60 +27,65 @@ impl Datab {
 
     pub fn createtable(&self) {
         self.conn.execute(
-            "create table if not exists types_of_timers (
+            "create table if not exists timers (
                     id integer primary key,
-                    name text not null unique
+                    type_of_timer text not null unique,
+                    total_time integer
                 )",
             rusqlite::NO_PARAMS,
         );
+        
     }
 
-    pub fn dbruntest(&self) {
-        let test = Timer {
-            id: 1,
-            timertype: "Work".to_string(),
-        };
+    pub fn db_new_val(&self, timerglobs: &TimerGlobs, timertype: String) {
+        let totaltime = *&timerglobs.total_time.as_millis() as u64;
         self.conn.execute(
-            "INSERT INTO types_of_timers (id, name) VALUES (?1, ?2)",
-            (&test.id, &test.timertype),
-        );
-        let mut stmt = self.conn.prepare("SELECT id, name FROM types_of_timers").unwrap();
-            
-        let timer_iter = stmt.query_map([], |row| {
-            Ok(Timer {
-                id: row.get(0)?,
-                timertype: row.get(1)?,
-            })
-        }).unwrap();
-        for timer in timer_iter {
-            println!("Found timer {:?}", timer.unwrap());
-        }
-    }
-
-    pub fn db_new_val(&self, test: &Timer) {
-        self.conn.execute(
-            "INSERT INTO types_of_timers (id, name) VALUES (?1, ?2)",
-            (&test.id, &test.timertype),
+            "INSERT INTO timers (id, type_of_timer, total_time) VALUES (?1, ?2, ?3)",
+            (&timerglobs.id, &timertype, totaltime),
         );
     }
 
-    pub fn db_update_val(&self) {
+    pub fn db_update_val(&self, totaltime : &u64, id: &u32) {
         let mut test = self.conn.execute(
-            "UPDATE types_of_timers SET name = 'Salmonela' WHERE id = 1",rusqlite::NO_PARAMS, 
+            "UPDATE timers SET total_time = (?1) WHERE id = (?2)",(totaltime,id), 
         ).unwrap();
     }
 
     pub fn db_read_all(&self) {
-        let mut stmt = self.conn.prepare("SELECT id, name FROM types_of_timers").unwrap();
+        let mut stmt = self.conn.prepare("SELECT id, type_of_timer, total_time FROM timers").unwrap();
             
         let timer_iter = stmt.query_map([], |row| {
             Ok(Timer {
                 id: row.get(0)?,
                 timertype: row.get(1)?,
+                time: row.get(2)?,
             })
         }).unwrap();
         for timer in timer_iter {
-            println!("Found timer {:?}", timer.unwrap());
+            println!("DB: {:?}", timer.unwrap());
         }
+    }
+
+    pub fn read_total_time(&self, id: i32) -> u64 {
+        let mut stmt = self.conn.prepare("SELECT id, type_of_timer, total_time FROM timers").unwrap();
+            
+        let timer_iter = stmt.query_map([], |row| {
+            Ok(Timer {
+                id: row.get(0)?,
+                timertype: row.get(1)?,
+                time: row.get(2)?,
+            })
+        }).unwrap();
+        for timer in timer_iter {
+            match timer {
+                Ok(T) => {
+                    if T.id == id {
+                       return T.time as u64
+                    }
+                },
+                Err(_) => return 0,
+            }
+        }
+        0
     }
 }
