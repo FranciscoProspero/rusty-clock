@@ -17,12 +17,11 @@ use std::sync::mpsc;
 
 fn main() {
     let database = Datab::new();
-
+    database.create_table();
     start_cli(&database);
 }
 
 fn start_cli(database : &Datab ) {
-
 
     let (rx, handlers) = launch_threads(&database);
 

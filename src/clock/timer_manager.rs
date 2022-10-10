@@ -43,15 +43,17 @@ pub fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Recei
                 notifier(TypesOfTimers::Coffee);
             },
             Ok(TypesOfTimers::Quit)  => {
-                let elapsed_time = now.elapsed();      
-                let mut num = mtx.lock().unwrap();
                 if running_pos < 5 {
-                    num[running_pos].update_total_timer(elapsed_time);
+                    let elapsed_time = now.elapsed();      
+                    let mut num = mtx.lock().unwrap();
+                    if running_pos < 5 {
+                        num[running_pos].update_total_timer(elapsed_time);
+                    }
+                    let totaltime = num[running_pos].total_time.as_millis() as u64;
+                    database.db_update_val(&totaltime, &num[running_pos].id);
+                    notifier(TypesOfTimers::Quit);
+                    println!("Quit -> Terminating.");
                 }
-                let totaltime = num[running_pos].total_time.as_millis() as u64;
-                database.db_update_val(&totaltime, &num[running_pos].id);
-                notifier(TypesOfTimers::Quit);
-                println!("Quit -> Terminating.");
                 break;
             }
             Err(TryRecvError::Disconnected) => {

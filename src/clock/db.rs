@@ -23,16 +23,14 @@ pub struct Datab {
 impl Datab {
     pub fn new() -> Datab {
         let conn = Connection::open("rusty-clock.db");
-        let db = match conn {
+        match conn {
             Ok(_) => Datab { conn : conn.unwrap(), _connected : true},
             Err(_) => Datab { conn : conn.unwrap(), _connected : false},
-        };
-        db.create_table();
-        db
+        }
     }
 
     pub fn create_table(&self) {
-        let create_table = self.conn.execute(
+        let createtable = self.conn.execute(
             "create table if not exists timers (
                     id integer primary key,
                     type_of_timer text not null unique,
@@ -47,21 +45,20 @@ impl Datab {
     
     fn is_empty(&self) -> bool{
         let mut stmt = self.conn.prepare("SELECT count(*) FROM timers").unwrap();
-        let rows = stmt.query_map([], |row| {
+        let mut rows = stmt.query_map([], |row| {
                 Ok(Count {
                     nr: row.get(0).unwrap(),
                 })
             }).unwrap();
 
-        for name_result in rows {
-            if name_result.unwrap().nr == 0 {
-                return true;
-            }
-            else {
-                return false;
-            }
+        let count_of_rows = rows.nth(0).unwrap().unwrap().nr;
+
+        if count_of_rows == 0 {
+            true
         }
-        false
+        else {
+            false
+        }
     }
 
     fn populate(&self) {
@@ -76,7 +73,7 @@ impl Datab {
         self.db_read_all();
     }
 
-    pub fn db_new_val(&self, timerglobs: &TimerGlobs, timertype: String) {
+    fn db_new_val(&self, timerglobs: &TimerGlobs, timertype: String) {
         let totaltime = *&timerglobs.total_time.as_millis() as u64;
         self.conn.execute(
             "INSERT INTO timers (id, type_of_timer, total_time) VALUES (?1, ?2, ?3)",

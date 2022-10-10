@@ -16,6 +16,6 @@
 - [x] types of timers
 - [x] start timer commands
 - [x] stop timer commands
-- [ ] save data
+- [x] save data
 - [x] notifiyer
 - [ ] gui
