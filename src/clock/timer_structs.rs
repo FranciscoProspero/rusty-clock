@@ -24,7 +24,7 @@ impl fmt::Display for TypesOfTimers {
 #[derive(Debug)]
 pub struct TimerGlobs {
     _timer_type: TypesOfTimers,
-    pub id: usize,
+    pub id: u32,
     pub total_time: Duration,
     current_time: Duration,
     _alert_timer: i32,
@@ -32,7 +32,7 @@ pub struct TimerGlobs {
 }
 
 impl TimerGlobs {
-    pub fn new(type_of_timer: TypesOfTimers, idx : usize, total_time : u64) -> TimerGlobs {
+    pub fn new(type_of_timer: TypesOfTimers, idx : u32, total_time : u64) -> TimerGlobs {
         TimerGlobs {_timer_type: type_of_timer, id: idx, total_time: Duration::from_millis(total_time), current_time: Duration::new(total_time,0), _alert_timer: 0, nr_of_start: 0}
     }
 

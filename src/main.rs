@@ -17,21 +17,19 @@ use std::sync::mpsc;
 
 fn main() {
     let database = Datab::new();
-    database.createtable();
+
     start_cli(&database);
 }
 
 fn start_cli(database : &Datab ) {
-    // let test = TimerGlobs::new(TypesOfTimers::Study,0);
-    // database.db_new_val(&test, TypesOfTimers::Study.to_string());
 
-    database.db_read_all();
-    //database.db_update_val(31,4);
-    //database.db_read_all();
+
     let (rx, handlers) = launch_threads(&database);
 
     main_loop(rx);
+
     database.db_read_all();
+    
     for handle in handlers {
         handle.join().unwrap();
     }
@@ -64,7 +62,7 @@ fn generate_timervec(database : &Datab) -> Vec<TimerGlobs> {
 
     for (i, name) in timer_names.into_iter().enumerate() {
         let total_time = database.read_total_time(i as i32);
-        timervec.push(TimerGlobs::new(name,i,total_time));
+        timervec.push(TimerGlobs::new(name,i as u32,total_time));
     }
     timervec
 }
@@ -74,13 +72,12 @@ fn main_loop (rx: std::sync::mpsc::Receiver<u32>) {
         match rx.try_recv() {
             Ok(1) => {
                 //Popup::run_popus();
-                println!("exit the popus")
             },
             Ok(_) => {
                 println!("Whateba")
             }
             Err(TryRecvError::Disconnected) => {
-                    println!("Error Disconetiooni.");
+                    println!("Disconnected from timer thread.");
                     break;
             }
             Err(TryRecvError::Empty) => {}

@@ -6,35 +6,74 @@ use std::time::SystemTime;
 pub struct Timer {
     pub id: i32,
     pub timertype: String,
-    pub time: f64,
+    pub time: u64,
 }
 
+#[derive(Debug)]
+pub struct Count {
+    pub nr: i32,
+}
 
 #[derive(Debug)]
 pub struct Datab {
     conn : Connection,
-    connected : bool,
+    _connected : bool,
 }
 
 impl Datab {
     pub fn new() -> Datab {
         let conn = Connection::open("rusty-clock.db");
-        match conn {
-            Ok(_) => Datab { conn : conn.unwrap(), connected : true},
-            Err(_) => Datab { conn : conn.unwrap(), connected : false},
-        }
+        let db = match conn {
+            Ok(_) => Datab { conn : conn.unwrap(), _connected : true},
+            Err(_) => Datab { conn : conn.unwrap(), _connected : false},
+        };
+        db.create_table();
+        db
     }
 
-    pub fn createtable(&self) {
-        self.conn.execute(
+    pub fn create_table(&self) {
+        let create_table = self.conn.execute(
             "create table if not exists timers (
                     id integer primary key,
                     type_of_timer text not null unique,
                     total_time integer
                 )",
-            rusqlite::NO_PARAMS,
+            [],
         );
-        
+        if self.is_empty() {
+            self.populate();
+        }
+    }
+    
+    fn is_empty(&self) -> bool{
+        let mut stmt = self.conn.prepare("SELECT count(*) FROM timers").unwrap();
+        let rows = stmt.query_map([], |row| {
+                Ok(Count {
+                    nr: row.get(0).unwrap(),
+                })
+            }).unwrap();
+
+        for name_result in rows {
+            if name_result.unwrap().nr == 0 {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+        false
+    }
+
+    fn populate(&self) {
+        let test = TimerGlobs::new(TypesOfTimers::Study,0,0);
+        self.db_new_val(&test, TypesOfTimers::Study.to_string());
+        let test = TimerGlobs::new(TypesOfTimers::Work,1,0);
+        self.db_new_val(&test, TypesOfTimers::Work.to_string());
+        let test = TimerGlobs::new(TypesOfTimers::Fun,2,0);
+        self.db_new_val(&test, TypesOfTimers::Fun.to_string());
+        let test = TimerGlobs::new(TypesOfTimers::Coffee,3,0);
+        self.db_new_val(&test, TypesOfTimers::Coffee.to_string());
+        self.db_read_all();
     }
 
     pub fn db_new_val(&self, timerglobs: &TimerGlobs, timertype: String) {
@@ -78,9 +117,9 @@ impl Datab {
         }).unwrap();
         for timer in timer_iter {
             match timer {
-                Ok(T) => {
-                    if T.id == id {
-                       return T.time as u64
+                Ok(timer_val) => {
+                    if timer_val.id == id {
+                       return timer_val.time as u64
                     }
                 },
                 Err(_) => return 0,
