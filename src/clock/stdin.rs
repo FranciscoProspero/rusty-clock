@@ -1,8 +1,7 @@
 use std::io;
-use std::sync::{Arc, Mutex};
-use super::timer_structs::{TimerGlobs, TypesOfTimers};
+use super::timer_structs::TypesOfTimers;
 
-pub fn stdin_parser(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, tx: std::sync::mpsc::Sender<TypesOfTimers>) {
+pub fn stdin_parser(tx: std::sync::mpsc::Sender<TypesOfTimers>) {
     let input_possibilities = vec!["Study", "study", "Work", "work", "Fun", "fun", "Coffee", "coffee"];
     let input_exit = vec!["Exit", "exit", "Quit", "quit", "End", "end", "Terminate", "terminate", "Q", "q"];
 
@@ -32,8 +31,5 @@ pub fn stdin_parser(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, tx: std::sync::mpsc::Sende
             break;
         }
     }
-    {
-        let num = mtx.lock().unwrap();
-        println!("Finali {:?}", *num); 
-    }
+    println!("Exit stdin parser");
 } 

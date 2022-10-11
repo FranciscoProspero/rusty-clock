@@ -1,6 +1,5 @@
-use rusqlite::{Connection, Result};
+use rusqlite::Connection;
 use super::timer_structs::{TimerGlobs, TypesOfTimers};
-use std::time::SystemTime;
 
 #[derive(Debug)]
 pub struct Timer {
@@ -30,7 +29,7 @@ impl Datab {
     }
 
     pub fn create_table(&self) {
-        let createtable = self.conn.execute(
+        self.conn.execute(
             "create table if not exists timers (
                     id integer primary key,
                     type_of_timer text not null unique,
@@ -82,9 +81,9 @@ impl Datab {
     }
 
     pub fn db_update_val(&self, totaltime : &u64, id: &u32) {
-        let mut test = self.conn.execute(
+        self.conn.execute(
             "UPDATE timers SET total_time = (?1) WHERE id = (?2)",(totaltime,id), 
-        ).unwrap();
+        );
     }
 
     pub fn db_read_all(&self) {

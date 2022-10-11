@@ -1,20 +1,30 @@
 use super::timer_structs::{TimerGlobs, TypesOfTimers};
 use super::notification::{notifier, random_request_notification};
-use super::db::{Datab, Timer};
+use super::db::Datab;
 use rand::Rng;
 use std::time::{Duration, Instant};
-use std::sync::{Arc, Mutex};
 use std::sync::mpsc::TryRecvError;
 
-pub fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Receiver<TypesOfTimers>, tx2: std::sync::mpsc::Sender<u32>) -> i32 {
+#[derive(PartialEq)]
+enum TimerState {
+    None,
+    Study,
+    Work,
+    Fun,
+    Coffee,
+}
+
+pub fn timer_thread(rx: std::sync::mpsc::Receiver<TypesOfTimers>, tx2: std::sync::mpsc::Sender<u32>) -> i32 {
     let mut now = Instant::now();
-    let mut running_pos : usize = 50;
+    let mut state = TimerState::None;
     let database = Datab::new();
     let mut rng = rand::thread_rng();
 
     let mut n1: u64 = rng.gen_range(6..20);
     let mut notifier_time = Instant::now();
     let mut random_seconds = Duration::new(n1, 0);
+
+    let mut timer_vec = generate_timervec(&database);
 
     loop {
 
@@ -27,33 +37,37 @@ pub fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Recei
         }
         match rx.try_recv() {
             Ok(TypesOfTimers::Study) => {
-                change_timer(&mtx , &mut running_pos, 0, &mut now, &database);
+                change_timer(&mut timer_vec , &mut state, TimerState::Study, &mut now, &database);
                 notifier(TypesOfTimers::Study);
             },
             Ok(TypesOfTimers::Work) => {
-                change_timer(&mtx , &mut running_pos, 1, &mut now, &database);
+                change_timer(&mut timer_vec , &mut state, TimerState::Work, &mut now, &database);
                 notifier(TypesOfTimers::Work);
             },
             Ok(TypesOfTimers::Fun) => {
-                change_timer(&mtx , &mut running_pos, 2, &mut now, &database);
+                change_timer(&mut timer_vec , &mut state, TimerState::Fun, &mut now, &database);
                 notifier(TypesOfTimers::Fun);
             },
             Ok(TypesOfTimers::Coffee) => {
-                change_timer(&mtx , &mut running_pos, 3, &mut now, &database);
+                change_timer(&mut timer_vec , &mut state, TimerState::Coffee, &mut now, &database);
                 notifier(TypesOfTimers::Coffee);
             },
             Ok(TypesOfTimers::Quit)  => {
-                if running_pos < 5 {
+                let running_pos = match state {
+                    TimerState::None => 4,
+                    TimerState::Study => 0,
+                    TimerState::Work => 1,
+                    TimerState::Fun => 2,
+                    TimerState::Coffee => 3,
+                };
+                if running_pos < 4 { 
                     let elapsed_time = now.elapsed();      
-                    let mut num = mtx.lock().unwrap();
-                    if running_pos < 5 {
-                        num[running_pos].update_total_timer(elapsed_time);
-                    }
-                    let totaltime = num[running_pos].total_time.as_millis() as u64;
-                    database.db_update_val(&totaltime, &num[running_pos].id);
+                    timer_vec[running_pos].update_total_timer(elapsed_time);
+                    let totaltime = timer_vec[running_pos].total_time.as_millis() as u64;
+                    database.db_update_val(&totaltime, &timer_vec[running_pos].id);
                     notifier(TypesOfTimers::Quit);
-                    println!("Quit -> Terminating.");
                 }
+                println!("Quit -> Terminating.");        
                 break;
             }
             Err(TryRecvError::Disconnected) => {
@@ -65,28 +79,46 @@ pub fn timer_thread(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, rx: std::sync::mpsc::Recei
     0
 }
 
+fn generate_timervec(database : &Datab) -> Vec<TimerGlobs> {
+    let timer_names: [TypesOfTimers; 4] = [TypesOfTimers::Study, TypesOfTimers::Work, TypesOfTimers::Fun, TypesOfTimers::Coffee];
+    let mut timervec = Vec::with_capacity(4);
 
-fn change_timer(mtx:&Arc<Mutex<Vec<TimerGlobs>>>, position : &mut usize, new_position: usize, time: &mut Instant, database : &Datab) {
-    if *position == new_position {
-        println!("Timer was already running!");
+    for (i, name) in timer_names.into_iter().enumerate() {
+        let total_time = database.read_total_time(i as i32);
+        timervec.push(TimerGlobs::new(name,i as u32,total_time));
     }
-    else if *position < 5 {
-        let elapsed_time = time.elapsed();      
-        let mut num = mtx.lock().unwrap();
-        num[*position].update_current_timer(elapsed_time);
-        num[*position].update_total_timer(elapsed_time);
+    timervec
+}
+
+fn change_timer(timer_vec: &mut Vec<TimerGlobs>, state : &mut TimerState, new_state: TimerState, time: &mut Instant, database : &Datab) {
+    if *state == new_state {
+        println!("Timer was already running!");
+        return ;
+    }
+
+    let position = match new_state {
+        TimerState::Study => 0,
+        TimerState::Work => 1,
+        TimerState::Fun => 2,
+        TimerState::Coffee => 3,
+        TimerState::None => 4,
+    };
+
+    if (position < 4) && (*state != TimerState::None){
+        let elapsed_time = time.elapsed(); 
+        timer_vec[position].update_current_timer(elapsed_time);
+        timer_vec[position].update_total_timer(elapsed_time);
         
-        let totaltime = *&num[*position].total_time.as_millis() as u64;
-        database.db_update_val(&totaltime, &(*&num[*position].id as u32));
+        let totaltime = timer_vec[position].total_time.as_millis() as u64;
+        database.db_update_val(&totaltime, &(timer_vec[position].id as u32));
 
         *time = Instant::now();
-        *position = new_position;
-        num[*position].increment_start_counter();
+        *state = new_state;
+        timer_vec[position].increment_start_counter();
     }
     else {
         *time = Instant::now();
-        *position = new_position;
-        let mut num = mtx.lock().unwrap();
-        num[*position].increment_start_counter();
+        *state = new_state;
+        timer_vec[position].increment_start_counter();
     }
 }

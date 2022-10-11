@@ -2,8 +2,7 @@
 mod clock;
 use clock::timer_manager::timer_thread;
 use clock::stdin::stdin_parser;
-use clock::timer_structs::{TimerGlobs, TypesOfTimers};
-use clock::db::{Datab, Timer};
+use clock::db::Datab;
 //use clock::popup::Popup;
 
 use std::sync::mpsc::TryRecvError;
@@ -12,7 +11,6 @@ use std::sync::mpsc::TryRecvError;
 // };
 
 use std::thread;
-use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 
 fn main() {
@@ -23,7 +21,7 @@ fn main() {
 
 fn start_cli(database : &Datab ) {
 
-    let (rx, handlers) = launch_threads(&database);
+    let (rx, handlers) = launch_threads();
 
     main_loop(rx);
 
@@ -34,36 +32,21 @@ fn start_cli(database : &Datab ) {
     }
 }
 
-fn launch_threads(database : &Datab) -> (std::sync::mpsc::Receiver<u32>, Vec<thread::JoinHandle<()>>){
-    let test_vec = generate_timervec(&database);
+fn launch_threads() -> (std::sync::mpsc::Receiver<u32>, Vec<thread::JoinHandle<()>>){
 
-    let timer_vec_mtx = Arc::new(Mutex::new(test_vec));
-    let timer_vec = Arc::clone(&timer_vec_mtx);
     let (tx, rx) = mpsc::channel();
     let (tx2, rx2) = mpsc::channel();
     let mut handlers = vec![];
     let handle = thread::spawn( move || { 
-        timer_thread(&timer_vec, rx, tx2);
+        timer_thread(rx, tx2);
     });
     handlers.push(handle);
 
-    let timer_vec2 = Arc::clone(&timer_vec_mtx);
     let handle = thread::spawn( move || { 
-        stdin_parser(&timer_vec2, tx);
+        stdin_parser(tx);
     });
     handlers.push(handle);
     (rx2, handlers)
-}
-
-fn generate_timervec(database : &Datab) -> Vec<TimerGlobs> {
-    let timer_names: [TypesOfTimers; 4] = [TypesOfTimers::Study, TypesOfTimers::Work, TypesOfTimers::Fun, TypesOfTimers::Coffee];
-    let mut timervec = Vec::with_capacity(4);
-
-    for (i, name) in timer_names.into_iter().enumerate() {
-        let total_time = database.read_total_time(i as i32);
-        timervec.push(TimerGlobs::new(name,i as u32,total_time));
-    }
-    timervec
 }
 
 fn main_loop (rx: std::sync::mpsc::Receiver<u32>) {
