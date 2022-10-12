@@ -53,18 +53,11 @@ pub fn timer_thread(rx: std::sync::mpsc::Receiver<TypesOfTimers>, tx2: std::sync
                 notifier(TypesOfTimers::Coffee);
             },
             Ok(TypesOfTimers::Quit)  => {
-                let running_pos = match state {
-                    TimerState::None => 4,
-                    TimerState::Study => 0,
-                    TimerState::Work => 1,
-                    TimerState::Fun => 2,
-                    TimerState::Coffee => 3,
-                };
-                if running_pos < 4 { 
+                if state != TimerState::None { 
+                    let running_pos = timer_vec_position(&state);
                     let elapsed_time = now.elapsed();      
                     timer_vec[running_pos].update_total_timer(elapsed_time);
-                    let totaltime = timer_vec[running_pos].total_time.as_millis() as u64;
-                    database.db_update_val(&totaltime, &timer_vec[running_pos].id);
+                    database.db_update_val(&(timer_vec[running_pos].total_time.as_millis() as u64), &timer_vec[running_pos].id);
                     notifier(TypesOfTimers::Quit);
                 }
                 println!("Quit -> Terminating.");        
@@ -85,7 +78,7 @@ fn generate_timervec(database : &Datab) -> Vec<TimerGlobs> {
 
     for (i, name) in timer_names.into_iter().enumerate() {
         let total_time = database.read_total_time(i as i32);
-        timervec.push(TimerGlobs::new(name,i as u32,total_time));
+        timervec.push(TimerGlobs::new(name, i as u32, total_time));
     }
     timervec
 }
@@ -96,29 +89,35 @@ fn change_timer(timer_vec: &mut Vec<TimerGlobs>, state : &mut TimerState, new_st
         return ;
     }
 
-    let position = match new_state {
-        TimerState::Study => 0,
-        TimerState::Work => 1,
-        TimerState::Fun => 2,
-        TimerState::Coffee => 3,
-        TimerState::None => 4,
-    };
+    let position = timer_vec_position(&new_state);
 
-    if (position < 4) && (*state != TimerState::None){
+    if *state != TimerState::None {
         let elapsed_time = time.elapsed(); 
         timer_vec[position].update_current_timer(elapsed_time);
         timer_vec[position].update_total_timer(elapsed_time);
         
-        let totaltime = timer_vec[position].total_time.as_millis() as u64;
-        database.db_update_val(&totaltime, &(timer_vec[position].id as u32));
+        database.db_update_val(&(timer_vec[position].total_time.as_millis() as u64), &timer_vec[position].id);
 
-        *time = Instant::now();
-        *state = new_state;
-        timer_vec[position].increment_start_counter();
+        timer_update_state(time, state, new_state, &mut timer_vec[position]);
     }
     else {
-        *time = Instant::now();
-        *state = new_state;
-        timer_vec[position].increment_start_counter();
+        timer_update_state(time, state, new_state, &mut timer_vec[position]);
     }
 }
+
+fn timer_vec_position(state: &TimerState) -> usize {
+    match state {
+        TimerState::None => 4,
+        TimerState::Study => 0,
+        TimerState::Work => 1,
+        TimerState::Fun => 2,
+        TimerState::Coffee => 3,
+    }
+}
+
+fn timer_update_state(time: &mut Instant, state : &mut TimerState, new_state : TimerState, running_timer: &mut TimerGlobs) {
+    *time = Instant::now();
+    *state = new_state;
+    running_timer.increment_start_counter();
+}
+
