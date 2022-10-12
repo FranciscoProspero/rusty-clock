@@ -1,12 +1,15 @@
 use std::time::Duration;
 use std::fmt;
 #[derive(Debug)]
+
+#[derive(PartialEq,Copy, Clone)]
 pub enum TypesOfTimers {
     Study,
     Work,
     Fun,
     Coffee,
-    Quit
+    Quit,
+    None
 }
 
 impl fmt::Display for TypesOfTimers {
@@ -17,6 +20,7 @@ impl fmt::Display for TypesOfTimers {
             TypesOfTimers::Fun => write!(f, "Fun"),
             TypesOfTimers::Coffee => write!(f, "Coffe"),
             TypesOfTimers::Quit => write!(f, "Quit"),
+            TypesOfTimers::None => write!(f, "None"),
         }
     }
 }

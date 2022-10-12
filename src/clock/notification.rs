@@ -3,14 +3,15 @@ use std::time::Duration;
 use super::timer_structs::TypesOfTimers;
 
 
-pub fn notifier( type_of_timer : TypesOfTimers) -> i32 {
+pub fn notifier( type_of_timer : &TypesOfTimers) -> i32 {
 
-    let timer = match type_of_timer {
+    let timer = match *type_of_timer {
         TypesOfTimers::Study => "Study",
         TypesOfTimers::Work => "Work",
         TypesOfTimers::Fun => "Fun",
         TypesOfTimers::Coffee => "Coffee",
-        TypesOfTimers::Quit => "Quit"
+        TypesOfTimers::Quit => "Quit",
+        TypesOfTimers::None => "None"
     };
     
     Notification::new()
