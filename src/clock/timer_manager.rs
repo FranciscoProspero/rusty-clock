@@ -103,3 +103,27 @@ fn timer_update_state(time: &mut Instant, state : &mut TypesOfTimers, new_state 
     running_timer.increment_start_counter();
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn timer_vec_position_All_ok() {
+        assert_eq!(5, timer_vec_position(&TypesOfTimers::Quit));
+        assert_eq!(4, timer_vec_position(&TypesOfTimers::None));
+        assert_eq!(0, timer_vec_position(&TypesOfTimers::Study));
+        assert_eq!(1, timer_vec_position(&TypesOfTimers::Work));
+        assert_eq!(2, timer_vec_position(&TypesOfTimers::Fun));
+        assert_eq!(3, timer_vec_position(&TypesOfTimers::Coffee));
+    }
+
+    #[test]
+    fn timer_update_state_none_to_fun() {
+        let mut now = Instant::now();
+        let mut state = TypesOfTimers::None;
+        let mut glob = TimerGlobs::new(TypesOfTimers::Fun, 2, 0);
+        timer_update_state(&mut now, &mut state, &TypesOfTimers::Fun, &mut glob);
+        assert_eq!(TypesOfTimers::Fun, state);
+    }
+
+}
