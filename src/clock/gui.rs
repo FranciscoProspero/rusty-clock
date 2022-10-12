@@ -1,5 +1,5 @@
 use iced::{
-    button, Alignment, Button, Column, Element, Sandbox, Text, window,
+    button, Alignment, Button, Column, Element, Sandbox, Text, window, Settings
 };
 
 #[derive(Default)]
@@ -13,16 +13,17 @@ impl Popup {
         Self::default()
     }
     
-    pub fn _run_popus() {
+    pub fn run_popus() {
+        println!("Poupus runis");
         let mut testis = window::Settings::default();
         testis.always_on_top = true;
         testis.size = (100, 400);
         testis.position = window::Position::Specific(0,0);
 
-        // Counter2::run(Settings {
-        //     window: testis,
-        //     ..Settings::default()
-        // });
+        Counter2::run(Settings {
+            window: testis,
+            ..Settings::default()
+        });
     }
 
     // pub fn run_main() {
@@ -35,6 +36,7 @@ impl Popup {
 
 #[derive(Debug, Clone, Copy)]
 pub enum Message {
+    Stop,
     Study,
     Work,
     Fun,
@@ -46,6 +48,7 @@ pub enum Message {
 #[derive(Default)]
 pub struct Counter2 {
     value: i32,
+    stop_button: button::State,
     study_button: button::State,
     work_button: button::State,
     fun_button: button::State,
@@ -73,6 +76,9 @@ impl Sandbox for Counter2 {
 
     fn update(&mut self, message: Message) {
         match message {
+            Message::Stop => {
+                println!("Stoppad da timah");
+            }
             Message::Study => {
                 println!("Having Studio");
             }
@@ -97,9 +103,13 @@ impl Sandbox for Counter2 {
 
     fn view(&mut self) -> Element<Message> {
         Column::new()
-            .padding(20)
-            .spacing(20)
+            .padding(40)
+            .spacing(40)
             .align_items(Alignment::Center)
+            .push(
+                Button::new(&mut self.stop_button, Text::new("Stop"))
+                    .on_press(Message::Stop),
+            )
             .push(
                 Button::new(&mut self.study_button, Text::new("Study"))
                     .on_press(Message::Study),
@@ -133,6 +143,7 @@ impl Sandbox for Counter2 {
 #[derive(Default)]
 pub struct Counter {
     value: i32,
+    stop_button: button::State,
     study_button: button::State,
     work_button: button::State,
     fun_button: button::State,
@@ -160,6 +171,9 @@ impl Sandbox for Counter {
 
     fn update(&mut self, message: Message) {
         match message {
+            Message::Stop => {
+                println!("Stoppad da timah");
+            }
             Message::Study => {
                 println!("Having Studio");
             }
@@ -174,6 +188,7 @@ impl Sandbox for Counter {
             }
             Message::Statistics => {
                 println!("Having Statistica");
+                Popup::run_popus();
             }
             Message::Quit => {
                 println!("Having quito");
@@ -187,6 +202,10 @@ impl Sandbox for Counter {
             .padding(20)
             .spacing(20)
             .align_items(Alignment::Center)
+            .push(
+                Button::new(&mut self.stop_button, Text::new("Stop"))
+                    .on_press(Message::Stop),
+            )
             .push(
                 Button::new(&mut self.study_button, Text::new("Study"))
                     .on_press(Message::Study),

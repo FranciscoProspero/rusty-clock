@@ -98,7 +98,6 @@ fn timer_vec_position(state: &TypesOfTimers) -> usize {
 
 fn timer_update_state(time: &mut Instant, state : &mut TypesOfTimers, new_state : &TypesOfTimers, running_timer: &mut TimerGlobs) {
     *time = Instant::now();
-    println!("state = {:?} new state = {:?}", *state, *new_state);
     *state = *new_state;
     running_timer.increment_start_counter();
 }

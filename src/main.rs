@@ -1,22 +1,51 @@
-
 mod clock;
 use clock::timer_manager::timer_thread;
 use clock::stdin::stdin_parser;
 use clock::db::Datab;
-//use clock::popup::Popup;
+use clock::gui::Counter;
 
 use std::sync::mpsc::TryRecvError;
-// use iced::{
-//     button, Alignment, Button, Column, Element, Sandbox, Settings, Text, window,
-// };
+use iced::{
+    button, Alignment, Button, Column, Element, Sandbox, Settings, Text, window,
+};
+use clap::Parser;
+
+#[derive(Parser,Default,Debug)]
+#[clap(author="Francisco Prospero", version, about="Rusty clock")]
+struct Arguments {
+    /// Start in GUI or cli
+    #[arg(short, long)]
+    gui: bool,
+
+}
 
 use std::thread;
 use std::sync::mpsc;
 
 fn main() {
+    let args = Arguments::parse();
     let database = Datab::new();
     database.create_table();
-    start_cli(&database);
+
+    if args.gui == false {      
+        start_cli(&database);
+    }
+    else {
+        start_gui(&database);
+    }
+}
+
+fn start_gui(database :  &Datab) {
+    let mut testis = window::Settings::default();
+    testis.always_on_top = true;
+    testis.size = (150, 450);
+    testis.position = window::Position::Specific(0,0);
+
+    println!("Start GUI");
+    Counter::run(Settings {
+        window: testis,
+        ..Settings::default()
+    });
 }
 
 fn start_cli(database : &Datab ) {
@@ -33,10 +62,10 @@ fn start_cli(database : &Datab ) {
 }
 
 fn launch_threads() -> (std::sync::mpsc::Receiver<u32>, Vec<thread::JoinHandle<()>>){
-
     let (tx, rx) = mpsc::channel();
     let (tx2, rx2) = mpsc::channel();
     let mut handlers = vec![];
+
     let handle = thread::spawn( move || { 
         timer_thread(rx, tx2);
     });
@@ -46,6 +75,7 @@ fn launch_threads() -> (std::sync::mpsc::Receiver<u32>, Vec<thread::JoinHandle<(
         stdin_parser(tx);
     });
     handlers.push(handle);
+
     (rx2, handlers)
 }
 
