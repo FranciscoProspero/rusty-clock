@@ -2,7 +2,7 @@ mod clock;
 use clock::timer_manager::timer_thread;
 use clock::stdin::stdin_parser;
 use clock::db::Datab;
-use clock::gui::Counter;
+use clock::gui::Gui;
 
 use std::sync::mpsc::TryRecvError;
 use iced::{
@@ -36,16 +36,19 @@ fn main() {
 }
 
 fn start_gui(database :  &Datab) {
-    let mut testis = window::Settings::default();
-    testis.always_on_top = true;
-    testis.size = (150, 450);
-    testis.position = window::Position::Specific(0,0);
+    // let mut testis = window::Settings::default();
+    // testis.always_on_top = true;
+    // testis.size = (150, 450);
+    // testis.position = window::Position::Specific(0,0);
 
+
+    // Counter::run(Settings {
+    //     window: testis,
+    //     ..Settings::default()
+    // });
     println!("Start GUI");
-    Counter::run(Settings {
-        window: testis,
-        ..Settings::default()
-    });
+    let gui = Gui::new();
+    gui.start();
 }
 
 fn start_cli(database : &Datab ) {

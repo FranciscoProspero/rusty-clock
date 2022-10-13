@@ -8,6 +8,6 @@ edition = "2021"
 [dependencies]
 rand = "0.8.5"
 notify-rust = "4.5.8"
-iced = "0.4.2"
+iced = { version = "0.4", features = ["smol"] }
 rusqlite = { version = "0.28.0", features = ["bundled"] }
 clap = { version = "4.0.13", features = ["derive"] }
