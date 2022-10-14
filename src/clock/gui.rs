@@ -1,25 +1,69 @@
+use super::timer_manager::timer_thread;
+use super::timer_structs::TypesOfTimers;
 use iced::{
     alignment, button, executor, time, Alignment, Application, Button, Column,
-    Command, Container, Element, Length, Row, Settings, Subscription, Text,
+    Command, Container, Element, Length, Row, Settings, Subscription, Text, window
 };
 use std::time::{Duration, Instant};
+use std::thread;
+use std::sync::mpsc;
+
+pub struct GuiRustyClock {
+    flag: bool,
+}
+
+impl GuiRustyClock {
+    pub fn new() -> GuiRustyClock {
+        GuiRustyClock {
+            flag: true,
+        }
+    }
+    
+    pub fn start(&self)  {
+        if self.flag == true {
+            let mut testis = window::Settings::default();
+            // testis.always_on_top = true;
+            testis.size = (600, 250);
+            //testis.position = window::Position::Specific(0,0);
+
+
+            // Counter::run(Settings {
+            //     window: testis,
+            //     ..Settings::default()
+            // });
+            RustyClock::run(Settings {
+                    window: testis,
+                    ..Settings::default()
+                });
+        }
+    }
+}
 
 pub struct Gui {
     flag: bool,
+    tx: std::sync::mpsc::Sender<TypesOfTimers>,
+    rx2: std::sync::mpsc::Receiver<u32>,
 }
 
 impl Gui {
     pub fn new() -> Gui {
+        let (tx, rx) = mpsc::channel();
+        let (tx2, rx2) = mpsc::channel();
+        let handle = thread::spawn( move || { 
+            timer_thread(rx, tx2);
+        });
+
         Gui {
             flag : true,
+            tx: tx,
+            rx2: rx2,
         }
     }
 
-    pub fn start(&self)  {
-        if self.flag == true {
-            RustyClock::run(Settings::default());
-        }
+    pub fn send(&self, type_of_timer: TypesOfTimers) {
+        self.tx.send(type_of_timer);
     }
+
 }
 
 struct RustyClock {
@@ -33,6 +77,7 @@ struct RustyClock {
     coffee: button::State,
     quit: button::State,
     exit: bool,
+    gui: Gui,
 }
 
 enum Timer {
@@ -65,20 +110,22 @@ impl Application for RustyClock {
     type Flags = ();
 
     fn new(_flags: ()) -> (RustyClock, Command<Message>) {
+        let gui = Gui::new();
         (
-            RustyClock {
-                duration: Duration::default(),
-                state: State::Idle,
-                current_timer: Timer::Stop,
-                stop: button::State::new(),
-                study: button::State::new(),
-                work: button::State::new(),
-                fun: button::State::new(),
-                coffee: button::State::new(),
-                quit: button::State::new(),
-                exit: false,
-            },
-            Command::none(),
+        RustyClock {
+            duration: Duration::default(),
+            state: State::Idle,
+            current_timer: Timer::Stop,
+            stop: button::State::new(),
+            study: button::State::new(),
+            work: button::State::new(),
+            fun: button::State::new(),
+            coffee: button::State::new(),
+            quit: button::State::new(),
+            exit: false,
+            gui: gui,
+        },
+        Command::none(),
         )
     }
 
@@ -89,6 +136,7 @@ impl Application for RustyClock {
     fn should_exit(&self) -> bool {
         self.exit
     }
+
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::Tick(now) => match &mut self.state {
@@ -102,6 +150,10 @@ impl Application for RustyClock {
                 self.state = State::Idle;
             },
             Message::Quit => {
+                self.gui.send(TypesOfTimers::Quit);
+                let onehundredms = time::Duration::from_millis(100);
+
+                thread::sleep(onehundredms);
                 self.exit = true;
             },
             Message::Study => {
@@ -118,6 +170,7 @@ impl Application for RustyClock {
                     _ => { 
                         self.current_timer = Timer::Study;
                         self.duration = Duration::default();
+                        self.gui.send(TypesOfTimers::Study);
                     },
                 };
             },
@@ -135,6 +188,7 @@ impl Application for RustyClock {
                     _ => {
                         self.current_timer = Timer::Work;
                         self.duration = Duration::default();
+                        self.gui.send(TypesOfTimers::Work);
                         match self.state {
                             State::Idle => {
                                 self.state = State::Ticking {
@@ -160,6 +214,7 @@ impl Application for RustyClock {
                     _ => {
                     self.current_timer = Timer::Fun;
                     self.duration = Duration::default();
+                    self.gui.send(TypesOfTimers::Fun);
                     match self.state {
                         State::Idle => {
                             self.state = State::Ticking {
@@ -185,6 +240,7 @@ impl Application for RustyClock {
                     _ => {
                         self.current_timer = Timer::Coffee;
                         self.duration = Duration::default();
+                        self.gui.send(TypesOfTimers::Coffee);
                         match self.state {
                             State::Idle => {
                                 self.state = State::Ticking {

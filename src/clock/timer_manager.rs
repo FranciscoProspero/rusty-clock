@@ -36,7 +36,8 @@ pub fn timer_thread(rx: std::sync::mpsc::Receiver<TypesOfTimers>, tx2: std::sync
                     database.db_update_val(&(timer_vec[running_pos].total_time.as_millis() as u64), &timer_vec[running_pos].id);
                     notifier(&TypesOfTimers::Quit);
                 }
-                println!("Quit -> Terminating.");        
+                println!("Quit -> Terminating.");
+                database.db_read_all();
                 break;
             },
             Ok(type_of_timer) => {

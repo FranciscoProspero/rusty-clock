@@ -2,13 +2,15 @@ mod clock;
 use clock::timer_manager::timer_thread;
 use clock::stdin::stdin_parser;
 use clock::db::Datab;
-use clock::gui::Gui;
+use clock::gui::GuiRustyClock;
 
 use std::sync::mpsc::TryRecvError;
 use iced::{
     button, Alignment, Button, Column, Element, Sandbox, Settings, Text, window,
 };
 use clap::Parser;
+use std::thread;
+use std::sync::mpsc;
 
 #[derive(Parser,Default,Debug)]
 #[clap(author="Francisco Prospero", version, about="Rusty clock")]
@@ -19,8 +21,6 @@ struct Arguments {
 
 }
 
-use std::thread;
-use std::sync::mpsc;
 
 fn main() {
     let args = Arguments::parse();
@@ -31,23 +31,12 @@ fn main() {
         start_cli(&database);
     }
     else {
-        start_gui(&database);
+        start_gui();
     }
 }
 
-fn start_gui(database :  &Datab) {
-    // let mut testis = window::Settings::default();
-    // testis.always_on_top = true;
-    // testis.size = (150, 450);
-    // testis.position = window::Position::Specific(0,0);
-
-
-    // Counter::run(Settings {
-    //     window: testis,
-    //     ..Settings::default()
-    // });
-    println!("Start GUI");
-    let gui = Gui::new();
+fn start_gui() {
+    let gui = GuiRustyClock::new();
     gui.start();
 }
 
