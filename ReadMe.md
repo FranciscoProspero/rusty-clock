@@ -1,5 +1,15 @@
 # Rusty-clock - The clock you don't need
 
+## How to run the rusty-clock
+
+#### To enter in cli mode run
+```
+cargo run
+```
+#### To enter GUI mode run
+```
+cargo run -- --gui
+```
 ## Objetivos:
 - [x] Ter um cli
 - [x] Receber um comando para dar start de timer especifico

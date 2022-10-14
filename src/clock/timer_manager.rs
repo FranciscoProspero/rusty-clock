@@ -36,7 +36,8 @@ pub fn timer_thread(rx: std::sync::mpsc::Receiver<TypesOfTimers>, tx2: std::sync
                     database.db_update_val(&(timer_vec[running_pos].total_time.as_millis() as u64), &timer_vec[running_pos].id);
                     notifier(&TypesOfTimers::Quit);
                 }
-                println!("Quit -> Terminating.");        
+                println!("Quit -> Terminating.");
+                database.db_read_all();
                 break;
             },
             Ok(type_of_timer) => {
@@ -98,7 +99,6 @@ fn timer_vec_position(state: &TypesOfTimers) -> usize {
 
 fn timer_update_state(time: &mut Instant, state : &mut TypesOfTimers, new_state : &TypesOfTimers, running_timer: &mut TimerGlobs) {
     *time = Instant::now();
-    println!("state = {:?} new state = {:?}", *state, *new_state);
     *state = *new_state;
     running_timer.increment_start_counter();
 }
