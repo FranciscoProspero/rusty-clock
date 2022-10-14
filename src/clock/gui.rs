@@ -26,11 +26,6 @@ impl GuiRustyClock {
             testis.size = (600, 250);
             //testis.position = window::Position::Specific(0,0);
 
-
-            // Counter::run(Settings {
-            //     window: testis,
-            //     ..Settings::default()
-            // });
             RustyClock::run(Settings {
                     window: testis,
                     ..Settings::default()
@@ -130,7 +125,7 @@ impl Application for RustyClock {
     }
 
     fn title(&self) -> String {
-        String::from("RustyClock - Iced")
+        String::from("Rusty Clock")
     }
 
     fn should_exit(&self) -> bool {

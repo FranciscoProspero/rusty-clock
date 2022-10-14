@@ -1,12 +1,13 @@
 # Rusty-clock - The clock you don't need
 
+![Rusty Clock GUI](/images/Rusty-clock-gui.jpg "Start Tracking your day!").
 ## How to run the rusty-clock
 
-#### To enter in cli mode run
+#### To enter in cli mode
 ```
 cargo run
 ```
-#### To enter GUI mode run
+#### To enter GUI mode
 ```
 cargo run -- --gui
 ```
