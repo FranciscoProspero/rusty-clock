@@ -18,7 +18,6 @@ struct Arguments {
     /// Start in GUI or cli
     #[arg(short, long)]
     gui: bool,
-
 }
 
 

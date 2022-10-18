@@ -33,7 +33,7 @@ pub fn timer_thread(rx: std::sync::mpsc::Receiver<TypesOfTimers>, tx2: std::sync
                     let running_pos = timer_vec_position(&state);
                     let elapsed_time = now.elapsed();      
                     timer_vec[running_pos].update_total_timer(elapsed_time);
-                    database.db_update_val(&(timer_vec[running_pos].total_time.as_millis() as u64), &timer_vec[running_pos].id);
+                    database.db_update_val(&timer_vec[running_pos]._timer_type.to_string(), &(timer_vec[running_pos].total_time.as_secs() as u64));
                     notifier(&TypesOfTimers::Quit);
                 }
                 println!("Quit -> Terminating.");
@@ -58,7 +58,7 @@ fn generate_timervec(database : &Datab) -> Vec<TimerGlobs> {
     let mut timervec = Vec::with_capacity(4);
 
     for (i, name) in timer_names.into_iter().enumerate() {
-        timervec.push(TimerGlobs::new(name, i as u32, database.read_total_time(i as i32)));
+        timervec.push(TimerGlobs::new(name, i as u32, database.read_total_time(name)));
     }
     timervec
 }
@@ -77,7 +77,7 @@ fn change_timer(timer_vec: &mut Vec<TimerGlobs>, state : &mut TypesOfTimers, new
         timer_vec[old_position].update_current_timer(elapsed_time);
         timer_vec[old_position].update_total_timer(elapsed_time);
         
-        database.db_update_val(&(timer_vec[old_position].total_time.as_millis() as u64), &timer_vec[old_position].id);
+        database.db_update_val(&timer_vec[old_position]._timer_type.to_string(), &(timer_vec[old_position].total_time.as_secs() as u64));
 
         timer_update_state(time, state, new_state, &mut timer_vec[new_position]);
     }

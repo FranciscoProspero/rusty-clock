@@ -18,7 +18,7 @@ impl fmt::Display for TypesOfTimers {
             TypesOfTimers::Study => write!(f, "Study"),
             TypesOfTimers::Work => write!(f, "Work"),
             TypesOfTimers::Fun => write!(f, "Fun"),
-            TypesOfTimers::Coffee => write!(f, "Coffe"),
+            TypesOfTimers::Coffee => write!(f, "Coffee"),
             TypesOfTimers::Quit => write!(f, "Quit"),
             TypesOfTimers::None => write!(f, "None"),
         }
@@ -27,7 +27,7 @@ impl fmt::Display for TypesOfTimers {
 
 #[derive(Debug)]
 pub struct TimerGlobs {
-    _timer_type: TypesOfTimers,
+    pub _timer_type: TypesOfTimers,
     pub id: u32,
     pub total_time: Duration,
     current_time: Duration,
@@ -37,7 +37,7 @@ pub struct TimerGlobs {
 
 impl TimerGlobs {
     pub fn new(type_of_timer: TypesOfTimers, idx : u32, total_time : u64) -> TimerGlobs {
-        TimerGlobs {_timer_type: type_of_timer, id: idx, total_time: Duration::from_millis(total_time), current_time: Duration::new(total_time,0), _alert_timer: 0, nr_of_start: 0}
+        TimerGlobs {_timer_type: type_of_timer, id: idx, total_time: Duration::from_secs(total_time), current_time: Duration::new(total_time,0), _alert_timer: 0, nr_of_start: 0}
     }
 
     pub fn update_current_timer(&mut self, elapsed_time : Duration) -> (){

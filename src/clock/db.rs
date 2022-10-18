@@ -1,11 +1,16 @@
-use rusqlite::Connection;
 use super::timer_structs::{TimerGlobs, TypesOfTimers};
+
+use rusqlite::Connection;
+use chrono::{Datelike, Timelike, Utc, Date};
 
 #[derive(Debug)]
 pub struct Timer {
     pub id: i32,
-    pub timertype: String,
-    pub time: u64,
+    pub date: String,
+    pub study: u64,
+    pub work: u64,
+    pub fun: u64,
+    pub coffee: u64,
 }
 
 #[derive(Debug)]
@@ -14,17 +19,25 @@ pub struct Count {
 }
 
 #[derive(Debug)]
+pub struct Test {
+    pub date: String,
+}
+
+#[derive(Debug)]
 pub struct Datab {
     conn : Connection,
+    today : Date<Utc>,
     _connected : bool,
 }
 
 impl Datab {
     pub fn new() -> Datab {
+
+        let today = Utc::today();
         let conn = Connection::open("rusty-clock.db");
         match conn {
-            Ok(_) => Datab { conn : conn.unwrap(), _connected : true},
-            Err(_) => Datab { conn : conn.unwrap(), _connected : false},
+            Ok(_) => Datab { conn : conn.unwrap(), today: today, _connected : true},
+            Err(_) => Datab { conn : conn.unwrap(), today: today, _connected : false},
         }
     }
 
@@ -32,24 +45,31 @@ impl Datab {
         self.conn.execute(
             "create table if not exists timers (
                     id integer primary key,
-                    type_of_timer text not null unique,
-                    total_time integer
+                    date text not null unique,
+                    study integer,
+                    work integer,
+                    fun integer,
+                    coffee integer
                 )",
             [],
         );
-        if self.is_empty() {
+        if self.is_table_empty() {
             self.populate();
         }
+        if self.is_today_empty() {
+            let formatted_date = format!("{}", self.today.format("%Y-%m-%d"));
+            let id = self.last_unique_id() + 1;
+            self.db_new_val(id, formatted_date, 0, 0, 0, 0);
+        }
     }
-    
-    fn is_empty(&self) -> bool{
-        let mut stmt = self.conn.prepare("SELECT count(*) FROM timers").unwrap();
+
+    fn count_db_lines(&self, query: String) -> bool {
+        let mut stmt = self.conn.prepare(&query.to_string()).unwrap();
         let mut rows = stmt.query_map([], |row| {
                 Ok(Count {
                     nr: row.get(0).unwrap(),
                 })
             }).unwrap();
-
         let count_of_rows = rows.nth(0).unwrap().unwrap().nr;
 
         if count_of_rows == 0 {
@@ -60,40 +80,60 @@ impl Datab {
         }
     }
 
+    fn is_table_empty(&self) -> bool{
+        let empty = self.count_db_lines("SELECT count(*) FROM timers".to_string());
+        if empty {
+            true
+        }
+        else {
+            false
+        }
+    }
+
+    fn is_today_empty(&self) -> bool{
+        let formatted = format!("{}", self.today.format("%Y-%m-%d"));
+        let query = "SELECT count(*) FROM timers WHERE date = \"".to_string();
+        let query = format!("{}{}{}", query, formatted, "\"".to_string());
+
+        let empty = self.count_db_lines(query);
+        if empty {
+            true
+        }
+        else {
+            false
+        }
+    }
+
     fn populate(&self) {
-        let test = TimerGlobs::new(TypesOfTimers::Study,0,0);
-        self.db_new_val(&test, TypesOfTimers::Study.to_string());
-        let test = TimerGlobs::new(TypesOfTimers::Work,1,0);
-        self.db_new_val(&test, TypesOfTimers::Work.to_string());
-        let test = TimerGlobs::new(TypesOfTimers::Fun,2,0);
-        self.db_new_val(&test, TypesOfTimers::Fun.to_string());
-        let test = TimerGlobs::new(TypesOfTimers::Coffee,3,0);
-        self.db_new_val(&test, TypesOfTimers::Coffee.to_string());
+        let formatted_date = format!("{}", self.today.format("%Y-%m-%d"));
+        self.db_new_val(0, formatted_date, 0, 0, 0, 0);
         self.db_read_all();
     }
 
-    fn db_new_val(&self, timerglobs: &TimerGlobs, timertype: String) {
-        let totaltime = *&timerglobs.total_time.as_millis() as u64;
+    fn db_new_val(&self, id: i32, date: String, study: i32, work: i32, fun: i32, coffee: i32 ) {
         self.conn.execute(
-            "INSERT INTO timers (id, type_of_timer, total_time) VALUES (?1, ?2, ?3)",
-            (&timerglobs.id, &timertype, totaltime),
+            "INSERT INTO timers (id, date, study, work, fun, coffee) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            (id, date, study, work, fun, coffee),
         );
     }
 
-    pub fn db_update_val(&self, totaltime : &u64, id: &u32) {
-        self.conn.execute(
-            "UPDATE timers SET total_time = (?1) WHERE id = (?2)",(totaltime,id), 
-        );
+    pub fn db_update_val(&self, timer: &String, totaltime : &u64) {
+        let query = "UPDATE timers SET ";
+        let query = format!("{}{}{}", query, timer.to_lowercase(),  "= (?1) WHERE id = (?2)".to_string());
+        self.conn.execute( &query, (totaltime, self.last_unique_id()) );
     }
 
     pub fn db_read_all(&self) {
-        let mut stmt = self.conn.prepare("SELECT id, type_of_timer, total_time FROM timers").unwrap();
+        let mut stmt = self.conn.prepare("SELECT id, date, study, work, fun, coffee FROM timers").unwrap();
             
         let timer_iter = stmt.query_map([], |row| {
             Ok(Timer {
                 id: row.get(0)?,
-                timertype: row.get(1)?,
-                time: row.get(2)?,
+                date: row.get(1)?,
+                study: row.get(2)?,
+                work: row.get(3)?,
+                fun: row.get(4)?,
+                coffee: row.get(5)?,
             })
         }).unwrap();
         for timer in timer_iter {
@@ -101,26 +141,57 @@ impl Datab {
         }
     }
 
-    pub fn read_total_time(&self, id: i32) -> u64 {
-        let mut stmt = self.conn.prepare("SELECT id, type_of_timer, total_time FROM timers").unwrap();
+    pub fn read_total_time(&self, timer: TypesOfTimers) -> u64 {
+        let query = "SELECT id, date, study, work, fun, coffee FROM timers WHERE id = ";
+        let query = format!("{}{}", query, self.last_unique_id() );
+        let mut stmt = self.conn.prepare(&query).unwrap();
             
         let timer_iter = stmt.query_map([], |row| {
             Ok(Timer {
                 id: row.get(0)?,
-                timertype: row.get(1)?,
-                time: row.get(2)?,
+                date: row.get(1)?,
+                study: row.get(2)?,
+                work: row.get(3)?,
+                fun: row.get(4)?,
+                coffee: row.get(5)?,
             })
         }).unwrap();
+        for iter_item in timer_iter {
+            match timer {
+                TypesOfTimers::Study => return iter_item.unwrap().study,
+                TypesOfTimers::Work => return iter_item.unwrap().work,
+                TypesOfTimers::Fun => return iter_item.unwrap().fun,
+                TypesOfTimers::Coffee => return iter_item.unwrap().coffee,
+                _ => 0
+            };
+        }
+        0
+    }
+
+    pub fn last_unique_id(&self) -> i32 {
+        let mut stmt = self.conn.prepare("SELECT id, date, study, work, fun, coffee FROM timers").unwrap();
+            
+        let timer_iter = stmt.query_map([], |row| {
+            Ok(Timer {
+                id: row.get(0)?,
+                date: row.get(1)?,
+                study: row.get(2)?,
+                work: row.get(3)?,
+                fun: row.get(4)?,
+                coffee: row.get(5)?,
+            })
+        }).unwrap();
+        let mut max_id = 0;
         for timer in timer_iter {
             match timer {
                 Ok(timer_val) => {
-                    if timer_val.id == id {
-                       return timer_val.time as u64
+                    if timer_val.id > max_id  {
+                       max_id = timer_val.id;
                     }
                 },
                 Err(_) => return 0,
             }
         }
-        0
+        max_id
     }
 }
