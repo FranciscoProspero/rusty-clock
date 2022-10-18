@@ -1,17 +1,23 @@
 # Rusty-clock - The clock you don't need
 
 ![Rusty Clock GUI](/images/Rusty-clock-gui.jpg "Start Tracking your day!").
+
 ## How to run the rusty-clock
 
-#### To enter in cli mode
-```
+### To enter in cli mode
+
+``` rust
 cargo run
 ```
-#### To enter GUI mode
-```
+
+### To enter GUI mode
+
+``` rust
 cargo run -- --gui
 ```
-## Objetivos:
+
+## Objetivos
+
 - [x] Ter um cli
 - [x] Receber um comando para dar start de timer especifico
 - [x] Tipos de timers -> Study, Work, Fun, Coffee
@@ -22,8 +28,9 @@ cargo run -- --gui
 - [ ] Notificar de y em y a perguntar o que se está a fazer
 - [x] Ter num nice gui :) probably tui-rs oops, icedrs afinal
 
-## Ordem Tarefas:
-- [x] cli 
+## Ordem Tarefas
+
+- [x] cli
 - [x] types of timers
 - [x] start timer commands
 - [x] stop timer commands
@@ -32,4 +39,4 @@ cargo run -- --gui
 - [x] gui
 - [ ] clean up
 - [ ] gui mostrar dados atuais de cada timer
-- [ ] mais dados na db
+- [x] mais dados na db

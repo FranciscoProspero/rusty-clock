@@ -28,6 +28,14 @@ pub fn timer_thread(rx: std::sync::mpsc::Receiver<TypesOfTimers>, tx2: std::sync
             notifier_time = Instant::now();
         }
         match rx.try_recv() {
+            Ok(TypesOfTimers::Stats) => {
+                let stats_per_month = database.read_average_per_month_with_month();
+                let stats_per_day = database.read_average();
+                for stat in stats_per_month {
+                    println!("year: {} month: {} study: {}s work: {}s fun: {}s coffee: {}s.", stat.5, stat.4, stat.0, stat.1, stat.2, stat.3);
+                }
+                println!("Average per day: study: {}s work: {}s fun: {}s coffee: {}s.", stats_per_day.0, stats_per_day.1, stats_per_day.2, stats_per_day.3);
+            },
             Ok(TypesOfTimers::Quit)  => {
                 if state != TypesOfTimers::None { 
                     let running_pos = timer_vec_position(&state);
@@ -88,6 +96,7 @@ fn change_timer(timer_vec: &mut Vec<TimerGlobs>, state : &mut TypesOfTimers, new
 
 fn timer_vec_position(state: &TypesOfTimers) -> usize {
     match state {
+        TypesOfTimers::Stats => 6,
         TypesOfTimers::Quit => 5,
         TypesOfTimers::None => 4,
         TypesOfTimers::Study => 0,

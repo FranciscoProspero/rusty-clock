@@ -4,7 +4,7 @@ use super::timer_structs::TypesOfTimers;
 pub fn stdin_parser(tx: std::sync::mpsc::Sender<TypesOfTimers>) {
     let input_possibilities = vec!["Study", "study", "Work", "work", "Fun", "fun", "Coffee", "coffee"];
     let input_exit = vec!["Exit", "exit", "Quit", "quit", "End", "end", "Terminate", "terminate", "Q", "q"];
-
+    let input_stats = vec!["Stats", "stats", "Statistics", "statistics", "Stat", "stat", "S", "s"];
     loop {
         
         let mut input = String::new();
@@ -29,6 +29,14 @@ pub fn stdin_parser(tx: std::sync::mpsc::Sender<TypesOfTimers>) {
             let res = tx.send(TypesOfTimers::Quit);
             res.unwrap();
             break;
+        }
+        else if input_stats.contains(&input.trim())
+        {
+            let res = tx.send(TypesOfTimers::Stats);
+            res.unwrap();
+        }
+        else {
+            println!("Invalid input, please try again.");
         }
     }
     println!("Exit stdin parser");

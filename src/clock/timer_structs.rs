@@ -9,6 +9,7 @@ pub enum TypesOfTimers {
     Fun,
     Coffee,
     Quit,
+    Stats,
     None
 }
 
@@ -20,6 +21,7 @@ impl fmt::Display for TypesOfTimers {
             TypesOfTimers::Fun => write!(f, "Fun"),
             TypesOfTimers::Coffee => write!(f, "Coffee"),
             TypesOfTimers::Quit => write!(f, "Quit"),
+            TypesOfTimers::Stats => write!(f, "Stats"),
             TypesOfTimers::None => write!(f, "None"),
         }
     }

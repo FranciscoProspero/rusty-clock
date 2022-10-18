@@ -5,17 +5,10 @@ use super::timer_structs::TypesOfTimers;
 
 pub fn notifier( type_of_timer : &TypesOfTimers) -> i32 {
 
-    let timer = match *type_of_timer {
-        TypesOfTimers::Study => "Study",
-        TypesOfTimers::Work => "Work",
-        TypesOfTimers::Fun => "Fun",
-        TypesOfTimers::Coffee => "Coffee",
-        TypesOfTimers::Quit => "Quit",
-        TypesOfTimers::None => "None"
-    };
+    let timer = type_of_timer.to_string();
     
     Notification::new()
-        .summary(timer)
+        .summary(&timer)
         .body("The application is quiting! babai.")
         .timeout(Timeout::Milliseconds(1000)) //milliseconds
         .show().unwrap();
