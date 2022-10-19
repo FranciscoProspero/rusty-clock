@@ -1,5 +1,7 @@
 use super::timer_manager::timer_thread;
 use super::timer_structs::TypesOfTimers;
+use super::db::Datab;
+
 use iced::{
     alignment, button, executor, time, Alignment, Application, Button, Column,
     Command, Container, Element, Length, Row, Settings, Subscription, Text, window
@@ -38,12 +40,14 @@ pub struct Gui {
     flag: bool,
     tx: std::sync::mpsc::Sender<TypesOfTimers>,
     rx2: std::sync::mpsc::Receiver<u32>,
+    database : Datab,
 }
 
 impl Gui {
     pub fn new() -> Gui {
         let (tx, rx) = mpsc::channel();
         let (tx2, rx2) = mpsc::channel();
+        let db = Datab::new();
         let handle = thread::spawn( move || { 
             timer_thread(rx, tx2);
         });
@@ -52,6 +56,7 @@ impl Gui {
             flag : true,
             tx: tx,
             rx2: rx2,
+            database: db,
         }
     }
 
@@ -59,12 +64,21 @@ impl Gui {
         self.tx.send(type_of_timer);
     }
 
+    // with timer as input return time in seconds
+
+
+
+
 }
 
 struct RustyClock {
     duration: Duration,
     state: State,
     current_timer: Timer,
+    study_timer: u64,
+    work_timer: u64,
+    fun_timer: u64,
+    coffee_timer: u64,
     stop: button::State,
     study: button::State,
     work: button::State,
@@ -111,6 +125,10 @@ impl Application for RustyClock {
             duration: Duration::default(),
             state: State::Idle,
             current_timer: Timer::Stop,
+            study_timer: gui.database.read_today_time(TypesOfTimers::Study),
+            work_timer: gui.database.read_today_time(TypesOfTimers::Work),
+            fun_timer: gui.database.read_today_time(TypesOfTimers::Fun),
+            coffee_timer: gui.database.read_today_time(TypesOfTimers::Coffee),
             stop: button::State::new(),
             study: button::State::new(),
             work: button::State::new(),
@@ -133,6 +151,7 @@ impl Application for RustyClock {
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
+        let old_duration = self.duration;
         match message {
             Message::Tick(now) => match &mut self.state {
                 State::Ticking { last_tick } => {
@@ -248,8 +267,25 @@ impl Application for RustyClock {
                 };
             }
         }
-
-        Command::none()
+        if self.duration.as_secs() > old_duration.as_secs() {
+            match self.current_timer {
+                Timer::Study => {
+                    self.study_timer += 1;
+                },
+                Timer::Work => {
+                    self.work_timer += 1;
+                },
+                Timer::Fun => {
+                    self.fun_timer += 1;
+                },
+                Timer::Coffee => {
+                    self.coffee_timer += 1;
+                },
+                _ => {}
+            }
+        }
+        
+        Command::none()   
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -330,21 +366,51 @@ impl Application for RustyClock {
             .push(work_button)
             .push(fun_button)
             .push(coffee_button);
+        
+        //convert timer study int to string
+        let timer_study = self.study_timer.to_string();
 
-        let quit_button =
-            button(&mut self.quit, "Quit", style::Button::Destructive)
+        let study_timer = Text::new(timer_study)
+            .size(40);
+
+        let timer_work = self.work_timer.to_string();
+
+        let work_timer = Text::new(timer_work)
+            .size(40);
+
+        let timer_fun = self.fun_timer.to_string();
+
+        let fun_timer = Text::new(timer_fun)
+            .size(40);
+
+        let timer_coffee = self.coffee_timer.to_string();
+
+        let coffee_timer = Text::new(timer_coffee)
+            .size(40);
+
+        let quit_button =button(&mut self.quit, "Quit", style::Button::Destructive)
                 .on_press(Message::Quit);
           
-        let quit_controls = Row::new()
+        
+        let counters = Row::new()
+            .spacing(50)
+            .push(quit_button)
+            .push(study_timer)
+            .push(work_timer)
+            .push(fun_timer)
+            .push(coffee_timer);
+            
+        let control_and_counters = Column::new()
+            .align_items(Alignment::Fill)
             .spacing(20)
-            .push(quit_button);
+            .push(controls)
+            .push(counters);
 
         let content = Column::new()
             .align_items(Alignment::Center)
             .spacing(20)
             .push(duration)
-            .push(controls)
-            .push(quit_controls);
+            .push(control_and_counters);
 
         Container::new(content)
             .width(Length::Fill)
@@ -382,3 +448,4 @@ mod style {
         }
     }
 }
+

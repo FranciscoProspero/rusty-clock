@@ -115,6 +115,7 @@ impl Datab {
         //     self.db_new_val(i, formatted_date, i, i, i, i);
         // }
         // self.db_read_all();
+        
     }
 
     fn db_new_val(&self, id: i32, date: String, study: i32, work: i32, fun: i32, coffee: i32 ) {
@@ -200,6 +201,35 @@ impl Datab {
             }
         }
         max_id
+    }
+
+    // input timer type and return time in seconds of today
+    pub fn read_today_time(&self, timer: TypesOfTimers) -> u64 {
+        let formatted = format!("{}", self.today.format("%Y-%m-%d"));
+        let query = "SELECT id, date, study, work, fun, coffee FROM timers WHERE date = \"".to_string();
+        let query = format!("{}{}{}", query, formatted, "\"".to_string());
+        let mut stmt = self.conn.prepare(&query).unwrap();
+            
+        let timer_iter = stmt.query_map([], |row| {
+            Ok(Timer {
+                id: row.get(0)?,
+                date: row.get(1)?,
+                study: row.get(2)?,
+                work: row.get(3)?,
+                fun: row.get(4)?,
+                coffee: row.get(5)?,
+            })
+        }).unwrap();
+        for iter_item in timer_iter {
+            match timer {
+                TypesOfTimers::Study => return iter_item.unwrap().study,
+                TypesOfTimers::Work => return iter_item.unwrap().work,
+                TypesOfTimers::Fun => return iter_item.unwrap().fun,
+                TypesOfTimers::Coffee => return iter_item.unwrap().coffee,
+                _ => 0
+            };
+        }
+        0
     }
 
     // receive as input year and return an average of timers on that year
@@ -326,8 +356,5 @@ impl Datab {
 
     
 }
-
-
-
 
 
