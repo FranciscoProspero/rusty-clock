@@ -85,6 +85,7 @@ struct RustyClock {
     fun: button::State,
     coffee: button::State,
     quit: button::State,
+    stats: button::State,
     exit: bool,
     gui: Gui,
 }
@@ -95,6 +96,7 @@ enum Timer {
     Work,
     Fun,
     Coffee,
+    Stats,
 }
 
 enum State {
@@ -105,6 +107,7 @@ enum State {
 #[derive(Debug, Clone)]
 enum Message {
     Stop,
+    Stats,
     Study,
     Work,
     Fun,
@@ -135,6 +138,7 @@ impl Application for RustyClock {
             fun: button::State::new(),
             coffee: button::State::new(),
             quit: button::State::new(),
+            stats: button::State::new(),
             exit: false,
             gui: gui,
         },
@@ -266,6 +270,9 @@ impl Application for RustyClock {
                     },
                 };
             }
+            Message::Stats => {
+                self.gui.send(TypesOfTimers::Stats);
+            }
         }
         if self.duration.as_secs() > old_duration.as_secs() {
             match self.current_timer {
@@ -327,6 +334,17 @@ impl Application for RustyClock {
             button(&mut self.stop, "Stop", style::Button::Halt)
                 .on_press(Message::Stop);
 
+        let quit_button =
+            button(&mut self.quit, "Quit", style::Button::Destructive)
+                .on_press(Message::Quit);
+          
+        let stop_column = Column::new()
+            .align_items(Alignment::Center)
+            .spacing(20)
+            .push(stop_button)
+            .push(quit_button);
+
+
         let study_button = {
             let color = match self.current_timer {
                 Timer::Study => style::Button::Primary,
@@ -334,6 +352,18 @@ impl Application for RustyClock {
             };
             button(&mut self.study, "Study", color).on_press(Message::Study)
         };
+
+        let timer_study = self.study_timer.to_string();
+
+        let study_timer = Text::new(timer_study)
+            .size(40);
+
+        let study_column = Column::new()
+            .align_items(Alignment::Center)
+            .spacing(20)
+            .push(study_button)
+            .push(study_timer);
+            
 
         let work_button = {
             let color = match self.current_timer {
@@ -343,6 +373,18 @@ impl Application for RustyClock {
             button(&mut self.work, "Work", color).on_press(Message::Work)
         };
 
+        let timer_work = self.work_timer.to_string();
+
+        let work_timer = Text::new(timer_work)
+            .size(40);
+
+        let work_column = Column::new()
+            .align_items(Alignment::Center)
+            .spacing(20)
+            .push(work_button)
+            .push(work_timer);
+
+
         let fun_button = {
             let color = match self.current_timer {
                 Timer::Fun => style::Button::Primary,
@@ -350,6 +392,18 @@ impl Application for RustyClock {
             };
             button(&mut self.fun, "Fun", color).on_press(Message::Fun)
         };
+
+        let timer_fun = self.fun_timer.to_string();
+
+        let fun_timer = Text::new(timer_fun)
+            .size(40);
+
+        let fun_column = Column::new()
+            .align_items(Alignment::Center)
+            .spacing(20)
+            .push(fun_button)
+            .push(fun_timer);
+
 
         let coffee_button = {
             let color = match self.current_timer {
@@ -359,58 +413,37 @@ impl Application for RustyClock {
             button(&mut self.coffee, "Coffee", color).on_press(Message::Coffee)
         };
 
-        let controls = Row::new()
-            .spacing(20)
-            .push(stop_button)
-            .push(study_button)
-            .push(work_button)
-            .push(fun_button)
-            .push(coffee_button);
-        
-        //convert timer study int to string
-        let timer_study = self.study_timer.to_string();
-
-        let study_timer = Text::new(timer_study)
-            .size(40);
-
-        let timer_work = self.work_timer.to_string();
-
-        let work_timer = Text::new(timer_work)
-            .size(40);
-
-        let timer_fun = self.fun_timer.to_string();
-
-        let fun_timer = Text::new(timer_fun)
-            .size(40);
-
         let timer_coffee = self.coffee_timer.to_string();
 
         let coffee_timer = Text::new(timer_coffee)
             .size(40);
 
-        let quit_button =button(&mut self.quit, "Quit", style::Button::Destructive)
-                .on_press(Message::Quit);
-          
-        
-        let counters = Row::new()
-            .spacing(50)
-            .push(quit_button)
-            .push(study_timer)
-            .push(work_timer)
-            .push(fun_timer)
-            .push(coffee_timer);
-            
-        let control_and_counters = Column::new()
-            .align_items(Alignment::Fill)
+        let coffee_column = Column::new()
+            .align_items(Alignment::Center)
             .spacing(20)
-            .push(controls)
-            .push(counters);
+            .push(coffee_button)
+            .push(coffee_timer);
+
+
+        let controls = Row::new()
+            .align_items(Alignment::Center)
+            .spacing(20)
+            .push(stop_column)
+            .push(study_column)
+            .push(work_column)
+            .push(fun_column)
+            .push(coffee_column);
+         
+
+        let stats_button = button(&mut self.stats, "Stats", style::Button::Info).on_press(Message::Stats);
+
 
         let content = Column::new()
             .align_items(Alignment::Center)
             .spacing(20)
             .push(duration)
-            .push(control_and_counters);
+            .push(controls)
+            .push(stats_button);
 
         Container::new(content)
             .width(Length::Fill)
@@ -429,6 +462,7 @@ mod style {
         Secondary,
         Destructive,
         Halt,
+        Info,
     }
 
     impl button::StyleSheet for Button {
@@ -439,6 +473,7 @@ mod style {
                     Button::Secondary => Color::from_rgb(0.5, 0.5, 0.5),
                     Button::Destructive => Color::from_rgb(0.8, 0.2, 0.2),
                     Button::Halt => Color::from_rgb(0.80, 0.40, 0.1 ),
+                    Button::Info => Color::from_rgb(0.10, 0.80, 0.1 ),
                 })),
                 border_radius: 12.0,
                 shadow_offset: Vector::new(1.0, 1.0),
