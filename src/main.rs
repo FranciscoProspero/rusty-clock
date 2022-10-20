@@ -5,9 +5,6 @@ use clock::db::Datab;
 use clock::gui::GuiRustyClock;
 
 use std::sync::mpsc::TryRecvError;
-use iced::{
-    button, Alignment, Button, Column, Element, Sandbox, Settings, Text, window,
-};
 use clap::Parser;
 use std::thread;
 use std::sync::mpsc;

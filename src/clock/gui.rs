@@ -28,18 +28,22 @@ impl GuiRustyClock {
             testis.size = (600, 250);
             //testis.position = window::Position::Specific(0,0);
 
-            RustyClock::run(Settings {
+            let result = RustyClock::run(Settings {
                     window: testis,
                     ..Settings::default()
                 });
+            match result {
+                Ok(_) => println!("Exited cleanly"),
+                Err(error) => println!("Exited with error: {}", error),
+            };
         }
     }
 }
 
 pub struct Gui {
-    flag: bool,
+    _flag: bool,
     tx: std::sync::mpsc::Sender<TypesOfTimers>,
-    rx2: std::sync::mpsc::Receiver<u32>,
+    _rx2: std::sync::mpsc::Receiver<u32>,
     database : Datab,
 }
 
@@ -48,27 +52,25 @@ impl Gui {
         let (tx, rx) = mpsc::channel();
         let (tx2, rx2) = mpsc::channel();
         let db = Datab::new();
-        let handle = thread::spawn( move || { 
+        let _handle = thread::spawn( move || { 
             timer_thread(rx, tx2);
         });
 
         Gui {
-            flag : true,
+            _flag : true,
             tx: tx,
-            rx2: rx2,
+            _rx2: rx2,
             database: db,
         }
     }
 
     pub fn send(&self, type_of_timer: TypesOfTimers) {
-        self.tx.send(type_of_timer);
+        let result = self.tx.send(type_of_timer);
+        match result {
+            Ok(_) => {},
+            Err(_) => {},
+        }
     }
-
-    // with timer as input return time in seconds
-
-
-
-
 }
 
 struct RustyClock {
@@ -96,7 +98,6 @@ enum Timer {
     Work,
     Fun,
     Coffee,
-    Stats,
 }
 
 enum State {

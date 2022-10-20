@@ -1,7 +1,7 @@
-use super::timer_structs::{TimerGlobs, TypesOfTimers};
+use super::timer_structs::TypesOfTimers;
 
 use rusqlite::Connection;
-use chrono::{Datelike, Timelike, Utc, Date, NaiveDate, Duration};
+use chrono::{Datelike, Utc, Date, NaiveDate};
 
 #[derive(Debug)]
 pub struct Timer {
@@ -42,7 +42,7 @@ impl Datab {
     }
 
     pub fn create_table(&self) {
-        self.conn.execute(
+        let result = self.conn.execute(
             "create table if not exists timers (
                     id integer primary key,
                     date text not null unique,
@@ -53,6 +53,11 @@ impl Datab {
                 )",
             [],
         );
+        match result {
+            Ok(_) => println!("Table created"),
+            Err(_) => println!("Table not created"),
+        };
+            
         if self.is_table_empty() {
             self.populate();
         }
@@ -119,16 +124,24 @@ impl Datab {
     }
 
     fn db_new_val(&self, id: i32, date: String, study: i32, work: i32, fun: i32, coffee: i32 ) {
-        self.conn.execute(
+        let result = self.conn.execute(
             "INSERT INTO timers (id, date, study, work, fun, coffee) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
             (id, date, study, work, fun, coffee),
         );
+        match result {
+            Ok(_) => println!("New row inserted"),
+            Err(_) => println!("Error inserting new row"),
+        };
     }
 
     pub fn db_update_val(&self, timer: &String, totaltime : &u64) {
         let query = "UPDATE timers SET ";
         let query = format!("{}{}{}", query, timer.to_lowercase(),  "= (?1) WHERE id = (?2)".to_string());
-        self.conn.execute( &query, (totaltime, self.last_unique_id()) );
+        let result = self.conn.execute( &query, (totaltime, self.last_unique_id()) );
+        match result {
+            Ok(_) => println!("Row updated"),
+            Err(_) => println!("Error updating row"),
+        };
     }
 
     pub fn db_read_all(&self) {
@@ -233,7 +246,7 @@ impl Datab {
     }
 
     // receive as input year and return an average of timers on that year
-    pub fn read_year_average(&self, year: i32) -> (u64, u64, u64, u64) {
+    pub fn _read_year_average(&self, year: i32) -> (u64, u64, u64, u64) {
         let mut stmt = self.conn.prepare("SELECT id, date, study, work, fun, coffee FROM timers").unwrap();
             
         let timer_iter = stmt.query_map([], |row| {
