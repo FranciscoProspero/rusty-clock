@@ -18,7 +18,6 @@ pub fn timer_thread(rx: std::sync::mpsc::Receiver<TypesOfTimers>, tx2: std::sync
 
     let mut timer_vec = generate_timervec(&database);
     let mut stopped_time = Duration::new(0, 0);
-    let mut current_timer = Duration::new(0, 0);
     loop {
 
         if notifier_time.elapsed() >= random_seconds {
@@ -40,7 +39,7 @@ pub fn timer_thread(rx: std::sync::mpsc::Receiver<TypesOfTimers>, tx2: std::sync
             Ok(TypesOfTimers::Quit)  => {
                 if state != TypesOfTimers::None { 
                     let running_pos = timer_vec_position(&state);
-                    let mut elapsed_time = Duration::new(0, 0);
+                    let mut elapsed_time;
                     if timer_vec[running_pos]._is_paused() {
                         elapsed_time = stopped_time;
                     }
@@ -63,21 +62,14 @@ pub fn timer_thread(rx: std::sync::mpsc::Receiver<TypesOfTimers>, tx2: std::sync
                 if state != TypesOfTimers::None { 
                     let running_pos = timer_vec_position(&state);
                     timer_vec[running_pos].update_running_paused(true, true);
-                    // this time is not calculated properly
                     stopped_time += now.elapsed();
-                    println!("stopitime {:?}", stopped_time);
                 }
             },
             Ok(type_of_timer) => {
-                println!("state is {:?}", state);
                 if state != TypesOfTimers::None { 
                     let running_pos = timer_vec_position(&state);
 
-                    //if timer_vec[running_pos] is stopped. restart timer
-                    println!("is running {:?}", timer_vec[running_pos]._is_running());
-                    println!("is paused {:?}", timer_vec[running_pos]._is_paused() );
                     if timer_vec[running_pos]._is_running() && timer_vec[running_pos]._is_paused() {
-                        println!("stopped_time {:?}", stopped_time);
                         timer_vec[running_pos].update_running_paused(true, false);
                         now = Instant::now();
                     }
@@ -114,8 +106,8 @@ fn change_timer(timer_vec: &mut Vec<TimerGlobs>, state : &mut TypesOfTimers, new
     let old_position = timer_vec_position(&state);
 
     if *state != TypesOfTimers::None {
-        let mut elapsed_time = Duration::new(0, 0);
-        if (timer_vec[old_position]._is_paused()) {
+        let mut elapsed_time;
+        if timer_vec[old_position]._is_paused() {
             elapsed_time = *stopped_time;
         }
         else if *stopped_time != Duration::new(0, 0) {

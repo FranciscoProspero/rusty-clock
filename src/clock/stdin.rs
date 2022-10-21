@@ -2,7 +2,7 @@ use std::io;
 use super::timer_structs::TypesOfTimers;
 
 pub fn stdin_parser(tx: std::sync::mpsc::Sender<TypesOfTimers>) {
-    let input_possibilities = vec!["Study", "study", "Work", "work", "Fun", "fun", "Coffee", "coffee"];
+    let input_possibilities = vec!["Study", "study", "Work", "work", "Fun", "fun", "Coffee", "coffee", "Stop", "stop"];
     let input_exit = vec!["Exit", "exit", "Quit", "quit", "End", "end", "Terminate", "terminate", "Q", "q"];
     let input_stats = vec!["Stats", "stats", "Statistics", "statistics", "Stat", "stat", "S", "s"];
     loop {
@@ -16,6 +16,7 @@ pub fn stdin_parser(tx: std::sync::mpsc::Sender<TypesOfTimers>) {
                 "Work" | "work" => tx.send(TypesOfTimers::Work),
                 "Fun" | "fun" => tx.send(TypesOfTimers::Fun),
                 "Coffee" | "coffee" => tx.send(TypesOfTimers::Coffee),
+                "Stop" | "stop" => tx.send(TypesOfTimers::Stop),
                 &_ => todo!(),
             };
 

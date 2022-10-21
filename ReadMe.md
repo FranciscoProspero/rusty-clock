@@ -23,10 +23,11 @@ cargo run -- --gui
 - [x] Tipos de timers -> Study, Work, Fun, Coffee
 - [x] Apenas um timer pode estar ativo
 - [x] Dá para mudar de timer sem ter de terminar o outro primeiro
-- [ ] Gravar valores por dia, semana, mes, ano e fazer estatisticas
+- [x] Gravar valores por dia, semana, mes, ano e fazer estatisticas
 - [ ] Avisar a cada x minutos que timer está a decorrer
 - [ ] Notificar de y em y a perguntar o que se está a fazer
 - [x] Ter num nice gui :) probably tui-rs oops, icedrs afinal
+- [ ] web assembly
 
 ## Ordem Tarefas
 
@@ -37,6 +38,6 @@ cargo run -- --gui
 - [x] save data
 - [ ] notifiyer
 - [x] gui
-- [ ] clean up
-- [ ] gui mostrar dados atuais de cada timer
+- [ ] clean up and comment
+- [x] gui mostrar dados atuais de cada timer
 - [x] mais dados na db
