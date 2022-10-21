@@ -1,4 +1,4 @@
-use super::timer_manager::timer_thread;
+use super::timer_manager::TimerManager;
 use super::timer_structs::TypesOfTimers;
 use super::db::Datab;
 
@@ -53,7 +53,8 @@ impl Gui {
         let (tx2, rx2) = mpsc::channel();
         let db = Datab::new();
         let _handle = thread::spawn( move || { 
-            timer_thread(rx, tx2);
+            let mut timer_manager = TimerManager::new(rx, tx2);
+            timer_manager.timer_thread();
         });
 
         Gui {

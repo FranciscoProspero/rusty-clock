@@ -1,5 +1,5 @@
 mod clock;
-use clock::timer_manager::timer_thread;
+use clock::timer_manager::TimerManager;
 use clock::stdin::stdin_parser;
 use clock::db::Datab;
 use clock::gui::GuiRustyClock;
@@ -55,7 +55,8 @@ fn launch_threads() -> (std::sync::mpsc::Receiver<u32>, Vec<thread::JoinHandle<(
     let mut handlers = vec![];
 
     let handle = thread::spawn( move || { 
-        timer_thread(rx, tx2);
+        let mut timer_manager = TimerManager::new(rx, tx2);
+        timer_manager.timer_thread();
     });
     handlers.push(handle);
 
