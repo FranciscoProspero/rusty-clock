@@ -167,6 +167,7 @@ impl Application for RustyClock {
             },
             Message::Stop => {
                 self.state = State::Idle;
+                self.gui.send(TypesOfTimers::Stop);
             },
             Message::Quit => {
                 self.gui.send(TypesOfTimers::Quit);
@@ -185,7 +186,7 @@ impl Application for RustyClock {
                     _ => {}
                 };
                 match self.current_timer {
-                    Timer::Study => {} ,
+                    Timer::Study => {self.gui.send(TypesOfTimers::Study)} ,
                     _ => { 
                         self.current_timer = Timer::Study;
                         self.duration = Duration::default();
@@ -203,7 +204,7 @@ impl Application for RustyClock {
                     _ => {}
                 };
                 match self.current_timer {
-                    Timer::Work => {} ,
+                    Timer::Work => {self.gui.send(TypesOfTimers::Work);} ,
                     _ => {
                         self.current_timer = Timer::Work;
                         self.duration = Duration::default();
@@ -229,7 +230,7 @@ impl Application for RustyClock {
                     _ => {}
                 };
                 match self.current_timer {
-                    Timer::Fun => {} ,
+                    Timer::Fun => {self.gui.send(TypesOfTimers::Fun);} ,
                     _ => {
                     self.current_timer = Timer::Fun;
                     self.duration = Duration::default();
@@ -255,7 +256,7 @@ impl Application for RustyClock {
                     _ => {}
                 };
                 match self.current_timer {
-                    Timer::Coffee => {} ,
+                    Timer::Coffee => {self.gui.send(TypesOfTimers::Coffee);} ,
                     _ => {
                         self.current_timer = Timer::Coffee;
                         self.duration = Duration::default();

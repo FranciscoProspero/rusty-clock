@@ -17,7 +17,8 @@ pub fn timer_thread(rx: std::sync::mpsc::Receiver<TypesOfTimers>, tx2: std::sync
     let mut random_seconds = Duration::new(n1, 0);
 
     let mut timer_vec = generate_timervec(&database);
-
+    let mut stopped_time = Duration::new(0, 0);
+    let mut current_timer = Duration::new(0, 0);
     loop {
 
         if notifier_time.elapsed() >= random_seconds {
@@ -39,7 +40,17 @@ pub fn timer_thread(rx: std::sync::mpsc::Receiver<TypesOfTimers>, tx2: std::sync
             Ok(TypesOfTimers::Quit)  => {
                 if state != TypesOfTimers::None { 
                     let running_pos = timer_vec_position(&state);
-                    let elapsed_time = now.elapsed();      
+                    let mut elapsed_time = Duration::new(0, 0);
+                    if timer_vec[running_pos]._is_paused() {
+                        elapsed_time = stopped_time;
+                    }
+                    else if stopped_time != Duration::new(0, 0) {
+                        elapsed_time = now.elapsed();
+                        elapsed_time += stopped_time;
+                    }
+                    else {
+                        elapsed_time = now.elapsed();
+                    }
                     timer_vec[running_pos].update_total_timer(elapsed_time);
                     database.db_update_val(&timer_vec[running_pos]._timer_type.to_string(), &(timer_vec[running_pos].total_time.as_secs() as u64));
                     notifier(&TypesOfTimers::Quit);
@@ -48,8 +59,30 @@ pub fn timer_thread(rx: std::sync::mpsc::Receiver<TypesOfTimers>, tx2: std::sync
                 database.db_read_all();
                 break;
             },
+            Ok(TypesOfTimers::Stop) => {
+                if state != TypesOfTimers::None { 
+                    let running_pos = timer_vec_position(&state);
+                    timer_vec[running_pos].update_running_paused(true, true);
+                    // this time is not calculated properly
+                    stopped_time += now.elapsed();
+                    println!("stopitime {:?}", stopped_time);
+                }
+            },
             Ok(type_of_timer) => {
-                change_timer(&mut timer_vec , &mut state, &type_of_timer, &mut now, &database);
+                println!("state is {:?}", state);
+                if state != TypesOfTimers::None { 
+                    let running_pos = timer_vec_position(&state);
+
+                    //if timer_vec[running_pos] is stopped. restart timer
+                    println!("is running {:?}", timer_vec[running_pos]._is_running());
+                    println!("is paused {:?}", timer_vec[running_pos]._is_paused() );
+                    if timer_vec[running_pos]._is_running() && timer_vec[running_pos]._is_paused() {
+                        println!("stopped_time {:?}", stopped_time);
+                        timer_vec[running_pos].update_running_paused(true, false);
+                        now = Instant::now();
+                    }
+                }
+                change_timer(&mut timer_vec , &mut state, &type_of_timer, &mut now, &database, &mut stopped_time);
                 notifier(&type_of_timer);
             },
             Err(TryRecvError::Disconnected) => {
@@ -71,7 +104,7 @@ fn generate_timervec(database : &Datab) -> Vec<TimerGlobs> {
     timervec
 }
 
-fn change_timer(timer_vec: &mut Vec<TimerGlobs>, state : &mut TypesOfTimers, new_state: &TypesOfTimers, time: &mut Instant, database : &Datab) {
+fn change_timer(timer_vec: &mut Vec<TimerGlobs>, state : &mut TypesOfTimers, new_state: &TypesOfTimers, time: &mut Instant, database : &Datab, stopped_time: &mut Duration) {
     if *state == *new_state {
         println!("Timer was already running!");
         return ;
@@ -81,21 +114,34 @@ fn change_timer(timer_vec: &mut Vec<TimerGlobs>, state : &mut TypesOfTimers, new
     let old_position = timer_vec_position(&state);
 
     if *state != TypesOfTimers::None {
-        let elapsed_time = time.elapsed(); 
+        let mut elapsed_time = Duration::new(0, 0);
+        if (timer_vec[old_position]._is_paused()) {
+            elapsed_time = *stopped_time;
+        }
+        else if *stopped_time != Duration::new(0, 0) {
+            elapsed_time = time.elapsed();
+            elapsed_time += *stopped_time;
+        }
+        else {
+            elapsed_time = time.elapsed();
+        }
+
         timer_vec[old_position].update_current_timer(elapsed_time);
         timer_vec[old_position].update_total_timer(elapsed_time);
-        
-        database.db_update_val(&timer_vec[old_position]._timer_type.to_string(), &(timer_vec[old_position].total_time.as_secs() as u64));
-
-        timer_update_state(time, state, new_state, &mut timer_vec[new_position]);
+        let total_time = &(timer_vec[old_position].total_time.as_secs() as u64);
+        database.db_update_val(&timer_vec[old_position]._timer_type.to_string(), &total_time);
+        timer_vec[old_position].update_running_paused(false, false);
+        timer_update_state(time, state, new_state, &mut timer_vec[new_position], true, false);
+        *stopped_time = Duration::new(0, 0);
     }
     else {
-        timer_update_state(time, state, new_state, &mut timer_vec[new_position]);
+        timer_update_state(time, state, new_state, &mut timer_vec[new_position], true, false);
     }
 }
 
 fn timer_vec_position(state: &TypesOfTimers) -> usize {
     match state {
+        TypesOfTimers::Stop => 7,
         TypesOfTimers::Stats => 6,
         TypesOfTimers::Quit => 5,
         TypesOfTimers::None => 4,
@@ -106,9 +152,10 @@ fn timer_vec_position(state: &TypesOfTimers) -> usize {
     }
 }
 
-fn timer_update_state(time: &mut Instant, state : &mut TypesOfTimers, new_state : &TypesOfTimers, running_timer: &mut TimerGlobs) {
+fn timer_update_state(time: &mut Instant, state : &mut TypesOfTimers, new_state : &TypesOfTimers, running_timer: &mut TimerGlobs,running: bool, paused: bool) {
     *time = Instant::now();
     *state = *new_state;
     running_timer.increment_start_counter();
+    running_timer.update_running_paused(running, paused);
 }
 

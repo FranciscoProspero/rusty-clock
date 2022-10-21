@@ -366,8 +366,5 @@ impl Datab {
         }
         (study_sum/count, work_sum/count, fun_sum/count, coffee_sum/count)
     }
-
     
 }
-
-
