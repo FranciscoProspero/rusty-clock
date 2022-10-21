@@ -1,7 +1,7 @@
 use super::timer_structs::{TimerGlobs, TypesOfTimers};
-use super::notification::{notifier, random_request_notification};
+use super::notification::Notify;
 use super::db::Datab;
-use rand::Rng;
+
 use std::time::{Duration, Instant};
 use std::sync::mpsc::TryRecvError;
 
@@ -10,22 +10,16 @@ pub fn timer_thread(rx: std::sync::mpsc::Receiver<TypesOfTimers>, tx2: std::sync
     let mut now = Instant::now();
     let mut state = TypesOfTimers::None;
     let database = Datab::new();
-    let mut rng = rand::thread_rng();
-
-    let mut n1: u64 = rng.gen_range(6..20);
-    let mut notifier_time = Instant::now();
-    let mut random_seconds = Duration::new(n1, 0);
 
     let mut timer_vec = generate_timervec(&database);
     let mut stopped_time = Duration::new(0, 0);
+
+    let mut notify = Notify::new(tx2);
+
     loop {
 
-        if notifier_time.elapsed() >= random_seconds {
-            let _tx_return = tx2.send(1);
-            random_request_notification(notifier_time.elapsed());
-            n1 = rng.gen_range(6..20);
-            random_seconds = Duration::new(n1, 0);
-            notifier_time = Instant::now();
+        if notify.notifier_time.elapsed() >= notify.random_secs {
+            notify.call_notifier();
         }
         match rx.try_recv() {
             Ok(TypesOfTimers::Stats) => {
@@ -52,7 +46,7 @@ pub fn timer_thread(rx: std::sync::mpsc::Receiver<TypesOfTimers>, tx2: std::sync
                     }
                     timer_vec[running_pos].update_total_timer(elapsed_time);
                     database.db_update_val(&timer_vec[running_pos]._timer_type.to_string(), &(timer_vec[running_pos].total_time.as_secs() as u64));
-                    notifier(&TypesOfTimers::Quit);
+                    notify.notifier(&TypesOfTimers::Quit);
                 }
                 println!("Quit -> Terminating.");
                 database.db_read_all();
@@ -75,7 +69,7 @@ pub fn timer_thread(rx: std::sync::mpsc::Receiver<TypesOfTimers>, tx2: std::sync
                     }
                 }
                 change_timer(&mut timer_vec , &mut state, &type_of_timer, &mut now, &database, &mut stopped_time);
-                notifier(&type_of_timer);
+                notify.notifier(&type_of_timer);
             },
             Err(TryRecvError::Disconnected) => {
                     println!("Error timer thread disconnected.")
