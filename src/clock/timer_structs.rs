@@ -69,11 +69,11 @@ impl TimerGlobs {
         self.running_paused = (running, paused);
     }
     
-    pub fn _is_running(&self) -> bool {
+    pub fn is_running(&self) -> bool {
         self.running_paused.0
     }
 
-    pub fn _is_paused(&self) -> bool {
+    pub fn is_paused(&self) -> bool {
         self.running_paused.1
     }
 

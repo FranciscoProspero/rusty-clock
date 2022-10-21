@@ -32,13 +32,16 @@ impl TimerManager {
     
     pub fn timer_thread(&mut self) -> i32 {
         loop {
+
             //When the random amount of time passed notify user to update what timer should be running
             if self.notify.notifier_time.elapsed() >= self.notify.random_secs {
                 self.notify.call_notifier();
             }
+            
             // When a message is received from the gui or cli run the corresponding task
             match self.receive_message.try_recv() {
                 Ok(TypesOfTimers::Stats) => {
+                    // print out statistics
                     self.show_stats(&self.database);
                 },
                 Ok(TypesOfTimers::Quit)  => {
@@ -55,21 +58,30 @@ impl TimerManager {
                     // If some timer is running, stop it and store current elapsed time
                     if self.state != TypesOfTimers::None { 
                         let running_pos = timer_vec_position(&self.state);
-                        self.timer_vec[running_pos].update_running_paused(true, true);
-                        self.stopped_time += self.now.elapsed();
+                        if !self.timer_vec[running_pos].is_paused() && self.timer_vec[running_pos].is_running() {
+                            self.timer_vec[running_pos].update_running_paused(true, true);
+                            self.stopped_time += self.now.elapsed();
+                        }
                     }
                 },
                 Ok(type_of_timer) => {
+                    // If some timer is running, check if the current timer is paused.
                     if self.state != TypesOfTimers::None { 
                         let running_pos = timer_vec_position(&self.state);
 
-                        if self.timer_vec[running_pos]._is_running() && self.timer_vec[running_pos]._is_paused() {
+                        //If the current running timer is paused, unpause it and start the timer again
+                        if self.timer_vec[running_pos].is_running() && self.timer_vec[running_pos].is_paused() {
                             self.timer_vec[running_pos].update_running_paused(true, false);
                             self.now = Instant::now();
                         }
                     }
-                    self.change_timer(&type_of_timer );
+                    // Request to change timer
+                    self.change_timer(&type_of_timer);
+
+                    // Windows notification of new running timer
                     self.notify.notifier(&type_of_timer);
+                
+
                 },
                 Err(TryRecvError::Disconnected) => {
                         println!("Error timer thread disconnected.")
@@ -81,35 +93,49 @@ impl TimerManager {
     }
 
     fn change_timer(&mut self, new_state: &TypesOfTimers ) {
+
         if self.state == *new_state {
-            println!("Timer was already running!");
-            return ;
+            //println!("Timer was already running!");
+            return;
         }
 
+        //get new and old state positions
         let new_position = timer_vec_position(&new_state);
         let old_position = timer_vec_position(&self.state);
 
+        // If state is not None update timer on database
         if self.state != TypesOfTimers::None {
             let mut elapsed_time;
-            if self.timer_vec[old_position]._is_paused() {
+            // if timer is paused save elapsed time with the stopped time
+            if self.timer_vec[old_position].is_paused() {
                 elapsed_time = self.stopped_time;
             }
+            // if stopped time is not zero and timer is running add it to current running time.
             else if self.stopped_time != Duration::new(0, 0) {
                 elapsed_time = self.now.elapsed();
                 elapsed_time += self.stopped_time;
             }
+            // if the timer was never stopped save current running time
             else {
                 elapsed_time = self.now.elapsed();
             }
 
+            // update struct and database
             self.timer_vec[old_position].update_current_timer(elapsed_time);
             self.timer_vec[old_position].update_total_timer(elapsed_time);
+
             let total_time = &(self.timer_vec[old_position].total_time.as_secs() as u64);
+
             self.database.db_update_val(&self.timer_vec[old_position]._timer_type.to_string(), &total_time);
+
+            // stop old timer
             self.timer_vec[old_position].update_running_paused(false, false);
+
+            // start new timer
             self.timer_update_state(&new_state, new_position, true, false);
             self.stopped_time = Duration::new(0, 0);
         }
+        // If no timer was running before, start the new timer
         else {
             self.timer_update_state(&new_state, new_position, true, false);
         }
@@ -131,9 +157,10 @@ impl TimerManager {
         println!("Average per day: study: {}s work: {}s fun: {}s coffee: {}s.", stats_per_day.0, stats_per_day.1, stats_per_day.2, stats_per_day.3);
     }
 
+    //update timer on quit. This function might be joined with change timer, they share functionality
     fn update_timer_on_db(&mut self, running_timer: usize) {
         let mut elapsed_time;
-        if self.timer_vec[running_timer]._is_paused() {
+        if self.timer_vec[running_timer].is_paused() {
             elapsed_time = self.stopped_time;
         }
         else if self.stopped_time != Duration::new(0, 0) {
@@ -149,7 +176,7 @@ impl TimerManager {
     }
 }
 
-
+// generates a vector with all the timers
 fn generate_timervec(database : &Datab) -> Vec<TimerGlobs> {
     let timer_names: [TypesOfTimers; 4] = [TypesOfTimers::Study, TypesOfTimers::Work, TypesOfTimers::Fun, TypesOfTimers::Coffee];
     let mut timervec = Vec::with_capacity(4);
@@ -160,6 +187,7 @@ fn generate_timervec(database : &Datab) -> Vec<TimerGlobs> {
     timervec
 }
 
+// returns the position on the vector of each timer
 fn timer_vec_position(state: &TypesOfTimers) -> usize {
     match *state {
         TypesOfTimers::Stop => 7,

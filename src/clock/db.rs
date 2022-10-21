@@ -54,7 +54,7 @@ impl Datab {
             [],
         );
         match result {
-            Ok(_) => println!("Table created"),
+            Ok(_) => (),
             Err(_) => println!("Table not created"),
         };
             
@@ -139,7 +139,7 @@ impl Datab {
         let query = format!("{}{}{}", query, timer.to_lowercase(),  "= (?1) WHERE id = (?2)".to_string());
         let result = self.conn.execute( &query, (totaltime, self.last_unique_id()) );
         match result {
-            Ok(_) => println!("Row updated"),
+            Ok(_) => (),
             Err(_) => println!("Error updating row"),
         };
     }
@@ -189,6 +189,7 @@ impl Datab {
         0
     }
 
+    //get the last unique id
     pub fn last_unique_id(&self) -> i32 {
         let mut stmt = self.conn.prepare("SELECT id, date, study, work, fun, coffee FROM timers").unwrap();
             

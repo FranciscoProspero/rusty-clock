@@ -33,7 +33,7 @@ impl GuiRustyClock {
                     ..Settings::default()
                 });
             match result {
-                Ok(_) => println!("Exited cleanly"),
+                Ok(_) => (),
                 Err(error) => println!("Exited with error: {}", error),
             };
         }
