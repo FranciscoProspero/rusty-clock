@@ -28,7 +28,8 @@ cargo run -- --gui
 - [ ] Notificar de y em y a perguntar o que se está a fazer
 - [x] Ter num nice gui :) probably tui-rs oops, icedrs afinal
 - [ ] web assembly
-
+- [ ] tests
+- [ ] sats on gui
 ## Ordem Tarefas
 
 - [x] cli
