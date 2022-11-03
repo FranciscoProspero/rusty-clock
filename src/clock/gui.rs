@@ -6,6 +6,7 @@ use iced::{
     alignment, button, executor, time, Alignment, Application, Button, Column,
     Command, Container, Element, Length, Row, Settings, Subscription, Text, window
 };
+
 use std::time::{Duration, Instant};
 use std::thread;
 use std::sync::mpsc;
@@ -74,6 +75,7 @@ impl Gui {
     }
 }
 
+
 struct RustyClock {
     duration: Duration,
     state: State,
@@ -93,12 +95,25 @@ struct RustyClock {
     gui: Gui,
 }
 
+#[derive(PartialEq, Eq)]
 enum Timer {
     Stop,
     Study,
     Work,
     Fun,
     Coffee,
+}
+
+impl Timer {
+    fn convert_to_type_of_timer(timer : &Timer) -> Option<TypesOfTimers> {
+        match timer {
+            Timer::Study => Some(TypesOfTimers::Study),
+            Timer::Work => Some(TypesOfTimers::Work),
+            Timer::Fun => Some(TypesOfTimers::Fun),
+            Timer::Coffee => Some(TypesOfTimers::Coffee),
+            _ => None,
+        }
+    }
 }
 
 enum State {
@@ -117,6 +132,35 @@ enum Message {
     Quit,
     Tick(Instant),
 }
+
+
+impl RustyClock {
+    fn change_running_timer(&mut self, new_timer : Timer){
+
+        if let Some(timer_to_send) = Timer::convert_to_type_of_timer(&new_timer) {
+            if self.current_timer == new_timer {
+                match self.state {
+                    State::Ticking { .. } => {},
+                    State::Idle => {
+                        self.gui.send(timer_to_send);
+                        self.state = State::Ticking {
+                            last_tick: Instant::now(),
+                        };
+                    },
+                }
+            }
+            else {
+                self.current_timer = new_timer;
+                self.duration = Duration::default();
+                self.gui.send(timer_to_send);
+                self.state = State::Ticking {
+                    last_tick: Instant::now(),
+                };
+            }
+        }
+    }
+}
+
 
 impl Application for RustyClock {
     type Executor = executor::Default;
@@ -173,109 +217,14 @@ impl Application for RustyClock {
             Message::Quit => {
                 self.gui.send(TypesOfTimers::Quit);
                 let onehundredms = time::Duration::from_millis(100);
-
                 thread::sleep(onehundredms);
                 self.exit = true;
             },
-            Message::Study => {
-                match self.state {
-                    State::Idle => {
-                        self.state = State::Ticking {
-                            last_tick: Instant::now(),
-                        };
-                    },
-                    _ => {}
-                };
-                match self.current_timer {
-                    Timer::Study => {self.gui.send(TypesOfTimers::Study)} ,
-                    _ => { 
-                        self.current_timer = Timer::Study;
-                        self.duration = Duration::default();
-                        self.gui.send(TypesOfTimers::Study);
-                    },
-                };
-            },
-            Message::Work => {
-                match self.state {
-                    State::Idle => {
-                        self.state = State::Ticking {
-                            last_tick: Instant::now(),
-                        };
-                    },
-                    _ => {}
-                };
-                match self.current_timer {
-                    Timer::Work => {self.gui.send(TypesOfTimers::Work);} ,
-                    _ => {
-                        self.current_timer = Timer::Work;
-                        self.duration = Duration::default();
-                        self.gui.send(TypesOfTimers::Work);
-                        match self.state {
-                            State::Idle => {
-                                self.state = State::Ticking {
-                                    last_tick: Instant::now(),
-                                };
-                            },
-                            _ => {}
-                        };
-                    },
-                };
-            },
-            Message::Fun => {
-                match self.state {
-                    State::Idle => {
-                        self.state = State::Ticking {
-                            last_tick: Instant::now(),
-                        };
-                    },
-                    _ => {}
-                };
-                match self.current_timer {
-                    Timer::Fun => {self.gui.send(TypesOfTimers::Fun);} ,
-                    _ => {
-                    self.current_timer = Timer::Fun;
-                    self.duration = Duration::default();
-                    self.gui.send(TypesOfTimers::Fun);
-                    match self.state {
-                        State::Idle => {
-                            self.state = State::Ticking {
-                                last_tick: Instant::now(),
-                            };
-                        },
-                        _ => {}
-                    };
-                    },
-                };
-            },
-            Message::Coffee => {
-                match self.state {
-                    State::Idle => {
-                        self.state = State::Ticking {
-                            last_tick: Instant::now(),
-                        };
-                    },
-                    _ => {}
-                };
-                match self.current_timer {
-                    Timer::Coffee => {self.gui.send(TypesOfTimers::Coffee);} ,
-                    _ => {
-                        self.current_timer = Timer::Coffee;
-                        self.duration = Duration::default();
-                        self.gui.send(TypesOfTimers::Coffee);
-                        match self.state {
-                            State::Idle => {
-                                self.state = State::Ticking {
-                                    last_tick: Instant::now(),
-                                };
-                            },
-                            _ => {}
-                        };
-                    },
-                };
-            }
-            Message::Stats => {
-                self.gui.send(TypesOfTimers::Stats);
-            }
+            Message::Study => self.change_running_timer(Timer::Study) ,
+            Message::Work => self.change_running_timer(Timer::Work),
+            Message::Fun => self.change_running_timer(Timer::Fun),
+            Message::Coffee => self.change_running_timer(Timer::Coffee),
+            Message::Stats => self.gui.send(TypesOfTimers::Stats)
         }
         if self.duration.as_secs() > old_duration.as_secs() {
             match self.current_timer {
@@ -486,4 +435,3 @@ mod style {
         }
     }
 }
-
